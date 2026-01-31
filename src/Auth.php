@@ -2070,4 +2070,379 @@ class Auth {
             return false;
         }
     }
+    
+    /**
+     * Create an invitation token for a new user
+     * Only admins and vorstand can create invitations
+     * 
+     * @param string $email Email address to invite
+     * @param string $role Role to assign (default: 'alumni')
+     * @param int $expirationHours Hours until token expires (default: 48)
+     * @return array Result with success status, message, and token
+     */
+    public function createInvitation(string $email, string $role = 'alumni', int $expirationHours = 48): array {
+        try {
+            // Validate caller has permission
+            $callerRole = $this->getUserRole();
+            if (!in_array($callerRole, ['admin', 'vorstand'], true)) {
+                $this->log("Invitation creation denied: insufficient permissions for role {$callerRole}");
+                return [
+                    'success' => false,
+                    'message' => 'Keine Berechtigung. Nur Admins und Vorstand können Einladungen erstellen.'
+                ];
+            }
+            
+            // Validate email
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return [
+                    'success' => false,
+                    'message' => 'Ungültige E-Mail-Adresse.'
+                ];
+            }
+            
+            // Check if user already exists
+            $stmt = $this->pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                return [
+                    'success' => false,
+                    'message' => 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.'
+                ];
+            }
+            
+            // Check for existing pending invitation
+            $stmt = $this->pdo->prepare("
+                SELECT id FROM invitations 
+                WHERE email = ? AND accepted_at IS NULL AND expires_at > NOW()
+            ");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                return [
+                    'success' => false,
+                    'message' => 'Es existiert bereits eine ausstehende Einladung für diese E-Mail-Adresse.'
+                ];
+            }
+            
+            // Generate cryptographic token
+            $token = bin2hex(random_bytes(32)); // 64 character hex string
+            
+            // Calculate expiration time
+            $expiresAt = date('Y-m-d H:i:s', strtotime("+{$expirationHours} hours"));
+            
+            // Insert invitation
+            $stmt = $this->pdo->prepare("
+                INSERT INTO invitations (email, token, role, created_by, created_at, expires_at)
+                VALUES (?, ?, ?, ?, NOW(), ?)
+            ");
+            
+            $createdBy = $this->getUserId();
+            $result = $stmt->execute([$email, $token, $role, $createdBy, $expiresAt]);
+            
+            if ($result) {
+                $invitationId = (int)$this->pdo->lastInsertId();
+                $this->log("Invitation created - ID: {$invitationId}, Email: {$email}, Role: {$role}, Created by: {$createdBy}");
+                
+                // Log to SystemLogger if available
+                if ($this->systemLogger) {
+                    $this->systemLogger->logAction(
+                        $createdBy,
+                        'create_invitation',
+                        'invitations',
+                        $invitationId,
+                        "Invitation created for {$email} with role {$role}"
+                    );
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'Einladung erfolgreich erstellt.',
+                    'invitation_id' => $invitationId,
+                    'token' => $token,
+                    'expires_at' => $expiresAt
+                ];
+            }
+            
+            $this->log("Invitation creation failed: Database insert failed for email: {$email}");
+            return [
+                'success' => false,
+                'message' => 'Fehler beim Erstellen der Einladung.'
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during invitation creation: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten.'
+            ];
+        }
+    }
+    
+    /**
+     * Validate an invitation token
+     * 
+     * @param string $token The invitation token to validate
+     * @return array Result with success status, message, and invitation data
+     */
+    public function validateInvitationToken(string $token): array {
+        try {
+            // Query for invitation
+            $stmt = $this->pdo->prepare("
+                SELECT id, email, role, created_by, created_at, expires_at, accepted_at
+                FROM invitations
+                WHERE token = ?
+            ");
+            $stmt->execute([$token]);
+            $invitation = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$invitation) {
+                $this->log("Token validation failed: Token not found");
+                return [
+                    'success' => false,
+                    'message' => 'Ungültiger Einladungs-Token.'
+                ];
+            }
+            
+            // Check if already accepted
+            if ($invitation['accepted_at'] !== null) {
+                $this->log("Token validation failed: Token already used - ID: {$invitation['id']}");
+                return [
+                    'success' => false,
+                    'message' => 'Diese Einladung wurde bereits verwendet.'
+                ];
+            }
+            
+            // Check if expired
+            if (strtotime($invitation['expires_at']) < time()) {
+                $this->log("Token validation failed: Token expired - ID: {$invitation['id']}");
+                return [
+                    'success' => false,
+                    'message' => 'Diese Einladung ist abgelaufen.'
+                ];
+            }
+            
+            $this->log("Token validated successfully - ID: {$invitation['id']}, Email: {$invitation['email']}");
+            
+            return [
+                'success' => true,
+                'message' => 'Token ist gültig.',
+                'invitation' => $invitation
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during token validation: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten.'
+            ];
+        }
+    }
+    
+    /**
+     * Register a new user using an invitation token
+     * 
+     * @param string $token Invitation token
+     * @param string $firstname First name
+     * @param string $lastname Last name
+     * @param string $password Password
+     * @return array Result with success status and message
+     */
+    public function registerWithInvitation(string $token, string $firstname, string $lastname, string $password): array {
+        try {
+            // Validate token first
+            $validation = $this->validateInvitationToken($token);
+            if (!$validation['success']) {
+                return $validation;
+            }
+            
+            $invitation = $validation['invitation'];
+            $email = $invitation['email'];
+            $role = $invitation['role'];
+            
+            // Validate password strength
+            $passwordCheck = $this->validatePasswordStrength($password);
+            if (!$passwordCheck['valid']) {
+                return [
+                    'success' => false,
+                    'message' => $passwordCheck['message']
+                ];
+            }
+            
+            // Validate names
+            if (empty(trim($firstname)) || empty(trim($lastname))) {
+                return [
+                    'success' => false,
+                    'message' => 'Vor- und Nachname sind erforderlich.'
+                ];
+            }
+            
+            // Hash password
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            // Begin transaction
+            $this->pdo->beginTransaction();
+            
+            try {
+                // Create user account
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO users (email, firstname, lastname, role, password, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                ");
+                
+                $result = $stmt->execute([$email, $firstname, $lastname, $role, $hashedPassword]);
+                
+                if (!$result) {
+                    throw new Exception("Failed to create user account");
+                }
+                
+                $newUserId = (int)$this->pdo->lastInsertId();
+                
+                // Mark invitation as accepted
+                $stmt = $this->pdo->prepare("
+                    UPDATE invitations 
+                    SET accepted_at = NOW()
+                    WHERE id = ?
+                ");
+                $stmt->execute([$invitation['id']]);
+                
+                // Commit transaction
+                $this->pdo->commit();
+                
+                $this->log("User registered via invitation - User ID: {$newUserId}, Email: {$email}, Role: {$role}");
+                
+                // Log to SystemLogger if available
+                if ($this->systemLogger) {
+                    $this->systemLogger->logAction(
+                        $newUserId,
+                        'register_with_invitation',
+                        'users',
+                        $newUserId,
+                        "User registered via invitation: {$email}"
+                    );
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'Registrierung erfolgreich. Sie können sich jetzt anmelden.',
+                    'user_id' => $newUserId
+                ];
+                
+            } catch (Exception $e) {
+                // Rollback transaction on error
+                $this->pdo->rollBack();
+                throw $e;
+            }
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during registration with invitation: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten.'
+            ];
+        } catch (Exception $e) {
+            $this->log("Error during registration with invitation: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein unerwarteter Fehler ist aufgetreten.'
+            ];
+        }
+    }
+    
+    /**
+     * Get pending invitations (for admin dashboard)
+     * Only admins and vorstand can view invitations
+     * 
+     * @param int $limit Maximum number of invitations to return
+     * @param int $offset Offset for pagination
+     * @return array Result with success status and invitations list
+     */
+    public function getPendingInvitations(int $limit = 50, int $offset = 0): array {
+        try {
+            // Validate caller has permission
+            $callerRole = $this->getUserRole();
+            if (!in_array($callerRole, ['admin', 'vorstand'], true)) {
+                return [
+                    'success' => false,
+                    'message' => 'Keine Berechtigung.'
+                ];
+            }
+            
+            $stmt = $this->pdo->prepare("
+                SELECT i.id, i.email, i.role, i.created_at, i.expires_at,
+                       u.firstname, u.lastname
+                FROM invitations i
+                LEFT JOIN users u ON i.created_by = u.id
+                WHERE i.accepted_at IS NULL AND i.expires_at > NOW()
+                ORDER BY i.created_at DESC
+                LIMIT ? OFFSET ?
+            ");
+            $stmt->execute([$limit, $offset]);
+            $invitations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return [
+                'success' => true,
+                'invitations' => $invitations
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error fetching pending invitations: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten.'
+            ];
+        }
+    }
+    
+    /**
+     * Delete an invitation (for canceling invitations)
+     * Only admins and vorstand can delete invitations
+     * 
+     * @param int $invitationId The invitation ID to delete
+     * @return array Result with success status and message
+     */
+    public function deleteInvitation(int $invitationId): array {
+        try {
+            // Validate caller has permission
+            $callerRole = $this->getUserRole();
+            if (!in_array($callerRole, ['admin', 'vorstand'], true)) {
+                return [
+                    'success' => false,
+                    'message' => 'Keine Berechtigung.'
+                ];
+            }
+            
+            $stmt = $this->pdo->prepare("DELETE FROM invitations WHERE id = ?");
+            $result = $stmt->execute([$invitationId]);
+            
+            if ($result && $stmt->rowCount() > 0) {
+                $this->log("Invitation deleted - ID: {$invitationId} by user ID: " . $this->getUserId());
+                
+                if ($this->systemLogger) {
+                    $this->systemLogger->logAction(
+                        $this->getUserId(),
+                        'delete_invitation',
+                        'invitations',
+                        $invitationId,
+                        "Invitation deleted"
+                    );
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'Einladung erfolgreich gelöscht.'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Einladung nicht gefunden.'
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error deleting invitation: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten.'
+            ];
+        }
+    }
 }
