@@ -3,8 +3,8 @@
  * Inventory management functionality including search, filters, and CRUD operations
  */
 
-import { getCsrfToken, addCsrfHeader, showToast, SKELETON_LOADER_DELAY, debounce, buildApiUrl, toggleButtonLoading, toggleButtonState } from './core.js';
-export function initInventoryImagePreview() {
+// Dependencies: Functions from core.js
+function initInventoryImagePreview() {
     const itemImageElement = document.getElementById('itemImage');
     
     if (itemImageElement) {
@@ -87,7 +87,7 @@ let currentFilters = {
  * Check if any search filters are active
  * @return {boolean} True if search text or any filter is not set to default
  */
-export function hasActiveFilters() {
+function hasActiveFilters() {
     return !!(currentFilters.search || 
               currentFilters.category !== 'all' || 
               currentFilters.location !== 'all' || 
@@ -97,7 +97,7 @@ export function hasActiveFilters() {
 /**
  * Reset all filters to default values
  */
-export function resetFilters() {
+function resetFilters() {
     // Reset filter state
     currentFilters = {
         search: '',
@@ -131,7 +131,7 @@ export function resetFilters() {
  * Initialize Perfect Search functionality
  * Sets up live search with debounce and multi-filter support
  */
-export function initPerfectSearch() {
+function initPerfectSearch() {
     const searchInput = document.getElementById('liveSearchInput');
     
     if (!searchInput) return;
@@ -154,7 +154,7 @@ export function initPerfectSearch() {
  * @param {string} value - Filter value
  * @param {HTMLElement} element - Clicked filter pill element
  */
-export function applyFilter(filterType, value, element) {
+function applyFilter(filterType, value, element) {
     // Update active state for this filter type
     const filterGroup = element.closest('.filter-pills');
     if (filterGroup) {
@@ -174,7 +174,7 @@ export function applyFilter(filterType, value, element) {
  * Generate error state HTML template
  * @return {string} HTML template for error state
  */
-export function getErrorStateTemplate() {
+function getErrorStateTemplate() {
     return `
         <div class="col-12">
             <div class="card glass-card text-center py-5 px-4 border-danger" style="max-width: 600px; margin: 0 auto;">
@@ -201,7 +201,7 @@ export function getErrorStateTemplate() {
  * @param {boolean} hasFilters - Whether filters are currently active
  * @return {string} HTML template for empty state
  */
-export function getEmptyStateTemplate(hasFilters) {
+function getEmptyStateTemplate(hasFilters) {
     return `
         <div class="col-12">
             <div class="card glass-card text-center py-5 px-4" style="max-width: 600px; margin: 0 auto;">
@@ -233,7 +233,7 @@ export function getEmptyStateTemplate(hasFilters) {
  * Perform AJAX search with current filters
  * Shows skeleton loaders during loading
  */
-export function performSearch() {
+function performSearch() {
     const inventoryContainer = document.getElementById('inventoryContainer');
     const searchSpinner = document.getElementById('searchSpinner');
     
@@ -319,7 +319,7 @@ export function performSearch() {
  * @param {HTMLElement} container - Inventory grid container
  * @param {number} count - Number of skeleton items to show (default: 8)
  */
-export function showSkeletonLoaders(container, count = 8) {
+function showSkeletonLoaders(container, count = 8) {
     const skeletonCards = [];
     
     for (let i = 0; i < count; i++) {
@@ -357,7 +357,7 @@ export function showSkeletonLoaders(container, count = 8) {
  * @param {number} count - Number of skeleton items to show (default: 6)
  * @returns {string} HTML string containing skeleton cards
  */
-export function createAlumniSkeleton(count = 6) {
+function createAlumniSkeleton(count = 6) {
     const skeletonCards = [];
     
     for (let i = 0; i < count; i++) {
@@ -437,7 +437,7 @@ export function createAlumniSkeleton(count = 6) {
  * @param {Array} items - Array of inventory items
  * @param {HTMLElement} container - Inventory grid container
  */
-export function renderInventoryItems(items, container) {
+function renderInventoryItems(items, container) {
     if (items.length === 0) {
         // Check if filters are active to show appropriate empty state
         const hasFilters = hasActiveFilters();
@@ -602,7 +602,7 @@ export function renderInventoryItems(items, container) {
  * @param {string} text - Text to escape
  * @return {string} Escaped text
  */
-export function escapeHtml(text) {
+function escapeHtml(text) {
     // Explicitly check for null and undefined
     if (text == null) return '';
     // Convert to string to handle non-string types
@@ -615,7 +615,7 @@ export function escapeHtml(text) {
 /**
  * Open create modal for inventory
  */
-export function openCreateModal() {
+function openCreateModal() {
     const modalLabel = document.getElementById('inventoryModalLabel');
     const formAction = document.getElementById('formAction');
     const submitBtnText = document.getElementById('submitBtnText');
@@ -637,7 +637,7 @@ export function openCreateModal() {
 /**
  * Update inventory card UI after quantity change
  */
-export function updateInventoryCardUI(itemId, newQuantity) {
+function updateInventoryCardUI(itemId, newQuantity) {
     const card = document.querySelector(`.inventory-card[data-item-id="${itemId}"]`);
     if (!card) return;
     
@@ -698,7 +698,7 @@ export function updateInventoryCardUI(itemId, newQuantity) {
 /**
  * Adjust inventory quantity (for mobile buttons)
  */
-export function adjustQuantity(itemId, adjustment, buttonElement) {
+function adjustQuantity(itemId, adjustment, buttonElement) {
     // Disable buttons temporarily using toggleButtonLoading
     const card = buttonElement.closest('.inventory-card');
     const buttons = card.querySelectorAll('.quantity-btn');
@@ -747,7 +747,7 @@ export function adjustQuantity(itemId, adjustment, buttonElement) {
 /**
  * Open quantity comment modal
  */
-export function openQuantityCommentModal(itemId) {
+function openQuantityCommentModal(itemId) {
     // Store the item ID in the modal
     document.getElementById('commentItemId').value = itemId;
     // Clear previous comment
@@ -773,7 +773,7 @@ export function openQuantityCommentModal(itemId) {
 /**
  * Submit quantity adjustment with comment
  */
-export function submitQuantityAdjustment() {
+function submitQuantityAdjustment() {
     const itemId = document.getElementById('commentItemId').value;
     const comment = document.getElementById('quantityComment').value.trim();
     
@@ -858,7 +858,7 @@ export function submitQuantityAdjustment() {
 /**
  * Open edit modal for inventory
  */
-export function openEditModal(itemId) {
+function openEditModal(itemId) {
     const modalLabel = document.getElementById('inventoryModalLabel');
     const formAction = document.getElementById('formAction');
     const submitBtnText = document.getElementById('submitBtnText');
@@ -949,7 +949,7 @@ export function openEditModal(itemId) {
 /**
  * Delete inventory item
  */
-export function deleteItem(itemId) {
+function deleteItem(itemId) {
     if (!confirm('Möchten Sie diesen Gegenstand wirklich löschen?')) {
         return;
     }
@@ -1006,7 +1006,7 @@ export function deleteItem(itemId) {
 /**
  * Filter inventory by category
  */
-export function filterCategory(category, element) {
+function filterCategory(category, element) {
     // Update active pill
     const pills = document.querySelectorAll('.filter-pill');
     pills.forEach(pill => {
@@ -1033,7 +1033,7 @@ export function filterCategory(category, element) {
 /**
  * Initialize inventory form submission with modern fetch API
  */
-export function initInventoryFormSubmit() {
+function initInventoryFormSubmit() {
     const inventoryFormElement = document.getElementById('inventoryForm');
     if (inventoryFormElement) {
         inventoryFormElement.addEventListener('submit', async function(e) {
@@ -1107,7 +1107,7 @@ export function initInventoryFormSubmit() {
 /**
  * Initialize drag and drop for inventory image upload
  */
-export function initInventoryDragDrop() {
+function initInventoryDragDrop() {
     const dragDropZone = document.getElementById('dragDropZone');
     const itemImageInput = document.getElementById('itemImage');
     
@@ -1146,7 +1146,7 @@ export function initInventoryDragDrop() {
  * Initialize all inventory-related functionality
  * Called on DOMContentLoaded for inventory pages
  */
-export function initInventoryManagement() {
+function initInventoryManagement() {
     initInventoryImagePreview();
     initInventoryFormSubmit();
     initInventoryDragDrop();
@@ -1162,7 +1162,7 @@ export function initInventoryManagement() {
  * Uses throttling to improve performance
  * Note: This is separate from the global back-to-top button and only appears on inventory page
  */
-export function initInventoryBackToTop() {
+function initInventoryBackToTop() {
     const backToTopBtn = document.getElementById('inventoryBackToTop');
     
     if (!backToTopBtn) return;
@@ -1209,7 +1209,7 @@ export function initInventoryBackToTop() {
  * Initialize event delegation for inventory actions
  * Uses event delegation to handle dynamically loaded content
  */
-export function initInventoryEventDelegation() {
+function initInventoryEventDelegation() {
     // Use event delegation on document for all inventory actions
     document.addEventListener('click', function(e) {
         const target = e.target.closest('[data-action]');
@@ -1290,7 +1290,7 @@ export function initInventoryEventDelegation() {
  * Initialize button loading spinners
  * Adds loading spinner to buttons on click to improve perceived performance
  */
-export function initButtonLoadingSpinners() {
+function initButtonLoadingSpinners() {
     // Select all buttons that should show loading spinners
     // Exclude modal close buttons, dropdown toggles, and regular type="button" used for JavaScript handlers
     const buttons = document.querySelectorAll('a.btn, button.btn:not([data-bs-dismiss]):not(.dropdown-toggle)');

@@ -9,13 +9,13 @@
  */
 
 // Configuration constants
-export const SKELETON_LOADER_DELAY = 500; // ms - delay before removing skeleton loaders
-export const INVENTORY_BACK_TO_TOP_THRESHOLD = 500; // px - scroll position to show back-to-top button
-export const FADE_ANIMATION_DURATION = 300; // ms - duration of fade animations
+const SKELETON_LOADER_DELAY = 500; // ms - delay before removing skeleton loaders
+const INVENTORY_BACK_TO_TOP_THRESHOLD = 500; // px - scroll position to show back-to-top button
+const FADE_ANIMATION_DURATION = 300; // ms - duration of fade animations
 const BANNER_ANIMATION_DELAY = 10; // ms - delay before cookie banner animation starts
-export const COOKIE_BANNER_HIDE_DELAY = 400; // ms - delay before hiding cookie banner
-export const COOKIE_BANNER_SHOW_DELAY = 1500; // ms - delay before showing cookie banner initially
-export const AOS_INIT_TIMEOUT = 2000; // ms - maximum time to wait for images before initializing AOS
+const COOKIE_BANNER_HIDE_DELAY = 400; // ms - delay before hiding cookie banner
+const COOKIE_BANNER_SHOW_DELAY = 1500; // ms - delay before showing cookie banner initially
+const AOS_INIT_TIMEOUT = 2000; // ms - maximum time to wait for images before initializing AOS
 
 // Get base URL and API URL from global config
 // Use ibcConfig (new) with fallback to appConfig (legacy) for backward compatibility
@@ -27,7 +27,7 @@ const BASE_URL = window.ibcConfig?.baseUrl ?? window.appConfig?.baseUrl ?? '';
  * @param {string} path - Path to append to base URL
  * @return {string} Full URL
  */
-export function buildApiUrl(path) {
+function buildApiUrl(path) {
     // Input validation
     if (!path || typeof path !== 'string') {
         return API_BASE_URL || '';
@@ -40,19 +40,19 @@ export function buildApiUrl(path) {
 }
 
 // Flag image URLs for language switcher
-export const FLAG_URLS = {
+const FLAG_URLS = {
     'de': 'assets/img/flags/de.svg',
     'en': 'assets/img/flags/gb.svg',
     'fr': 'assets/img/flags/fr.svg'
 };
 
 // Flag alt texts for accessibility
-export const FLAG_ALT_TEXTS = {
+const FLAG_ALT_TEXTS = {
     'de': 'Deutsche Flagge',
     'en': 'Britische Flagge',
     'fr': 'Französische Flagge'
 };
-export function getStorageItem(key) {
+function getStorageItem(key) {
     try {
         return localStorage.getItem(key);
     } catch (e) {
@@ -64,7 +64,7 @@ export function getStorageItem(key) {
     }
 }
 
-export function setStorageItem(key, value) {
+function setStorageItem(key, value) {
     try {
         localStorage.setItem(key, value);
         return true;
@@ -77,7 +77,7 @@ export function setStorageItem(key, value) {
         }
     }
 }
-export function getCsrfToken() {
+function getCsrfToken() {
     // Try to get token from meta tag (primary source)
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     if (metaTag) {
@@ -105,7 +105,7 @@ export function getCsrfToken() {
  * @param {Object} headers - Existing headers object
  * @return {Object} Headers with CSRF token added
  */
-export function addCsrfHeader(headers = {}) {
+function addCsrfHeader(headers = {}) {
     const token = getCsrfToken();
     if (token) {
         headers['X-CSRF-Token'] = token;
@@ -257,7 +257,7 @@ window.secureFetch = function(url, options = {}) {
         return originalFetch(url, options);
     };
 })();
-export function toggleButtonState(button, isLoading) {
+function toggleButtonState(button, isLoading) {
     if (!button) return;
     
     if (isLoading) {
@@ -302,7 +302,7 @@ export function toggleButtonState(button, isLoading) {
  * Backward compatibility alias for toggleButtonState
  * @deprecated Use toggleButtonState instead
  */
-export function toggleButtonLoading(buttonElement, isLoading) {
+function toggleButtonLoading(buttonElement, isLoading) {
     toggleButtonState(buttonElement, isLoading);
 }
 
@@ -312,10 +312,10 @@ export function toggleButtonLoading(buttonElement, isLoading) {
  * @param {HTMLElement} btn - The button element to modify
  * @param {boolean} loading - Whether to show loading state (true) or restore normal state (false)
  */
-export function toggleButton(btn, loading) {
+function toggleButton(btn, loading) {
     toggleButtonState(btn, loading);
 }
-export function initGlobalImageErrorHandler() {
+function initGlobalImageErrorHandler() {
     // Generate unique IDs for SVG gradients to prevent conflicts
     const gradientId1 = 'ibcGrad1-' + Math.random().toString(36).substring(2, 11);
     const gradientId2 = 'ibcGrad2-' + Math.random().toString(36).substring(2, 11);
@@ -455,7 +455,7 @@ export function initGlobalImageErrorHandler() {
 }
 
 // Cookie Banner Functions
-export function acceptCookies() {
+function acceptCookies() {
     // Store consent in localStorage, with sessionStorage as fallback if localStorage fails
     const stored = setStorageItem("cookie_consent", "true");
     if (!stored) {
@@ -473,7 +473,7 @@ export function acceptCookies() {
 }
 
 // Function to decline cookies
-export function declineCookies() {
+function declineCookies() {
     // Store decline in localStorage, with sessionStorage as fallback if localStorage fails
     const stored = setStorageItem("cookie_consent", "false");
     if (!stored) {
@@ -493,7 +493,7 @@ export function declineCookies() {
 // Function to reopen cookie banner (for Cookie-Einstellungen button)
 // Note: This allows users to review their choice but doesn't automatically revoke consent
 // If users want to revoke, they can simply not click "Akzeptieren" again and refresh
-export function reopenCookieBanner() {
+function reopenCookieBanner() {
     const cookieBanner = document.getElementById("cookie-banner");
     if (cookieBanner) {
         cookieBanner.style.display = "block";
@@ -508,7 +508,7 @@ export function reopenCookieBanner() {
     // without losing their preference. Users can revoke by clearing browser data
     // or by using the browser's built-in cookie controls.
 }
-export function initializeAOSWhenReady() {
+function initializeAOSWhenReady() {
     if (typeof AOS === 'undefined') {
         console.warn('AOS library not loaded - animations will not be available');
         return;
@@ -593,7 +593,7 @@ export function initializeAOSWhenReady() {
         }
     });
 }
-export function addFadeInAnimation() {
+function addFadeInAnimation() {
     const cards = document.querySelectorAll('.card');
     cards.forEach((card, index) => {
         setTimeout(() => {
@@ -608,7 +608,7 @@ export function addFadeInAnimation() {
 /**
  * Initialize scroll-based animations using Intersection Observer
  */
-export function initScrollAnimations() {
+function initScrollAnimations() {
     // Check if Intersection Observer is supported
     if (!('IntersectionObserver' in window)) {
         // Fallback: show all elements immediately
@@ -644,7 +644,7 @@ export function initScrollAnimations() {
 /**
  * Initialize Bootstrap form validation
  */
-export function initFormValidation() {
+function initFormValidation() {
     const forms = document.querySelectorAll('.needs-validation');
     
     Array.from(forms).forEach(form => {
@@ -661,7 +661,7 @@ export function initFormValidation() {
 /**
  * Auto-hide alerts after 5 seconds
  */
-export function autoHideAlerts() {
+function autoHideAlerts() {
     const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
     
     alerts.forEach(alert => {
@@ -675,7 +675,7 @@ export function autoHideAlerts() {
 /**
  * Image preview before upload
  */
-export function previewImage(input, previewId) {
+function previewImage(input, previewId) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         
@@ -694,14 +694,14 @@ export function previewImage(input, previewId) {
 /**
  * Confirm before delete
  */
-export function confirmDelete(message) {
+function confirmDelete(message) {
     return confirm(message || 'Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?');
 }
 
 /**
  * Copy text to clipboard
  */
-export function copyToClipboard(text) {
+function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         showToast('In Zwischenablage kopiert!', 'success');
     }).catch(() => {
@@ -712,7 +712,7 @@ export function copyToClipboard(text) {
 /**
  * Show bootstrap toast notification
  */
-export function showToast(message, type = 'info') {
+function showToast(message, type = 'info') {
     // Create toast element if it doesn't exist
     let toastContainer = document.getElementById('toastContainer');
     
@@ -747,7 +747,7 @@ export function showToast(message, type = 'info') {
         toastElement.remove();
     });
 }
-export function debounce(func, wait) {
+function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
         const later = () => {
@@ -762,7 +762,7 @@ export function debounce(func, wait) {
 /**
  * Format date to German locale
  */
-export function formatDate(dateString) {
+function formatDate(dateString) {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('de-DE', options);
 }
@@ -770,7 +770,7 @@ export function formatDate(dateString) {
 /**
  * Scroll to top smoothly
  */
-export function scrollToTop() {
+function scrollToTop() {
     window.scrollTo({
         top: 0,
         behavior: 'smooth'
@@ -795,7 +795,7 @@ window.addEventListener('scroll', function() {
         scrollBtn.remove();
     }
 });
-export function initializeLanguageFlag() {
+function initializeLanguageFlag() {
     // Read the language from cookie or localStorage
     var cookies = document.cookie.split(';');
     var currentLang = ''; // Empty by default
@@ -844,7 +844,7 @@ export function initializeLanguageFlag() {
  * Initialize email copy functionality for footer
  * Allows users to click on email links to copy the address to clipboard
  */
-export function initializeEmailCopy() {
+function initializeEmailCopy() {
     const emailLinks = document.querySelectorAll('.copy-email-link');
     
     emailLinks.forEach(function(link) {
@@ -870,7 +870,7 @@ export function initializeEmailCopy() {
         });
     });
 }
-export function removeSkeletonLoaders() {
+function removeSkeletonLoaders() {
     // Wait for initial render, then remove skeleton classes
     setTimeout(() => {
         const skeletons = document.querySelectorAll('.skeleton');
@@ -906,7 +906,7 @@ export function removeSkeletonLoaders() {
 /**
  * Handle logo image loading errors
  */
-export function initLogoErrorHandling() {
+function initLogoErrorHandling() {
     const logo = document.getElementById('navbar-logo');
     const fallbackText = document.getElementById('navbar-fallback-text');
     
@@ -917,7 +917,7 @@ export function initLogoErrorHandling() {
         });
     }
 }
-export function selectRole(role) {
+function selectRole(role) {
     // Show loading overlay
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) {
@@ -962,7 +962,7 @@ export function selectRole(role) {
  * Apply to project functionality
  * In production, this would send an application to the backend
  */
-export function applyToProject(projectTitle) {
+function applyToProject(projectTitle) {
     // In production, this would send an application to the backend
     showToast('Bewerbung für Projekt "' + projectTitle + '" wird eingereicht.\n\nIn der finalen Version würde hier ein Formular zur Projektbewerbung erscheinen.', 'info');
     

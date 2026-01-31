@@ -3,9 +3,9 @@
  * Alumni database search, profile management, and edit mode functionality
  */
 
-import { getCsrfToken, showToast, SKELETON_LOADER_DELAY, debounce, addCsrfHeader, toggleButtonState, toggleButtonLoading, buildApiUrl } from './core.js';
+// Dependencies: Functions from core.js
 
-export function createAlumniSkeleton(count = 6) {
+function createAlumniSkeleton(count = 6) {
     const skeletonCards = [];
     
     for (let i = 0; i < count; i++) {
@@ -77,7 +77,7 @@ export function createAlumniSkeleton(count = 6) {
     
     return skeletonCards.join('');
 }
-export function initAlumniDatabaseSearch() {
+function initAlumniDatabaseSearch() {
     const searchInput = document.getElementById('alumniDatabaseSearch');
     const gridContainer = document.getElementById('alumniDatabaseGrid');
     const searchSpinner = document.getElementById('alumniSearchSpinner');
@@ -415,7 +415,7 @@ export function initAlumniDatabaseSearch() {
  * Initialize Alumni Edit Modal functionality
  * Handles edit button clicks, form submission, and image preview
  */
-export function initAlumniEditModal() {
+function initAlumniEditModal() {
     const editModal = document.getElementById('alumniEditModal');
     const editForm = document.getElementById('alumniEditForm');
     const profilePictureInput = document.getElementById('profilePictureInput');
@@ -665,7 +665,7 @@ if (document.readyState === 'loading') {
  * Initialize Edit Mode Toggle functionality
  * Allows admins to toggle global edit mode for the system
  */
-export function initEditModeToggle() {
+function initEditModeToggle() {
     const editModeToggle = document.getElementById('edit-mode-toggle');
     const editModeFab = document.getElementById('edit-mode-fab');
     

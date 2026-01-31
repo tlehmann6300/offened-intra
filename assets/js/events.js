@@ -3,9 +3,9 @@
  * Event countdown timer functionality
  */
 
-import { showToast } from './core.js';
+// Dependencies: Functions from core.js
 
-export function initEventCountdown() {
+function initEventCountdown() {
     // Check if countdown element exists on the page
     const countdownElement = document.getElementById('event-countdown');
     if (!countdownElement) {
