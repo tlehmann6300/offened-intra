@@ -48,6 +48,7 @@ login_debug.txt
 !create_database_sql/inventory_sample_data.sql
 !create_database_sql/alumni_schema.sql
 !create_database_sql/news_schema.sql
+!migrations/*.sql
 
 # Vendor dependencies (composer packages)
 vendor/
