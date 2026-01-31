@@ -28,9 +28,94 @@ if (php_sapi_name() !== 'cli') {
 
 // Set up paths
 define('BASE_PATH', dirname(__DIR__));
+
+// Load composer autoloader
 require_once BASE_PATH . '/vendor/autoload.php';
-require_once BASE_PATH . '/config/config.php';
-require_once BASE_PATH . '/config/db.php';
+
+// Load environment variables from .env file if it exists
+if (file_exists(BASE_PATH . '/.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(BASE_PATH);
+    $dotenv->load();
+}
+
+// Load minimal configuration for CLI (avoid session initialization in config.php)
+// Define database constants before loading db.php
+if (!defined('DB_CONTENT_HOST')) {
+    define('DB_CONTENT_HOST', $_ENV['DB_CONTENT_HOST'] ?? getenv('DB_CONTENT_HOST') ?: 'db5019375140.hosting-data.io');
+}
+if (!defined('DB_CONTENT_NAME')) {
+    define('DB_CONTENT_NAME', $_ENV['DB_CONTENT_NAME'] ?? getenv('DB_CONTENT_NAME') ?: 'dbs15161271');
+}
+if (!defined('DB_CONTENT_USER')) {
+    define('DB_CONTENT_USER', $_ENV['DB_CONTENT_USER'] ?? getenv('DB_CONTENT_USER') ?: 'dbu2067984');
+}
+if (!defined('DB_CONTENT_PASS')) {
+    define('DB_CONTENT_PASS', $_ENV['DB_CONTENT_PASS'] ?? getenv('DB_CONTENT_PASS') ?: 'Wort!Zahl?Wort#41254g');
+}
+if (!defined('DB_USER_HOST')) {
+    define('DB_USER_HOST', $_ENV['DB_USER_HOST'] ?? getenv('DB_USER_HOST') ?: 'db5019508945.hosting-data.io');
+}
+if (!defined('DB_USER_NAME')) {
+    define('DB_USER_NAME', $_ENV['DB_USER_NAME'] ?? getenv('DB_USER_NAME') ?: 'dbs15253086');
+}
+if (!defined('DB_USER_USER')) {
+    define('DB_USER_USER', $_ENV['DB_USER_USER'] ?? getenv('DB_USER_USER') ?: 'dbu4494103');
+}
+if (!defined('DB_USER_PASS')) {
+    define('DB_USER_PASS', $_ENV['DB_USER_PASS'] ?? getenv('DB_USER_PASS') ?: 'Q9!mZ7$A2v#Lr@8x');
+}
+if (!defined('DB_CHARSET')) {
+    define('DB_CHARSET', $_ENV['DB_CHARSET'] ?? getenv('DB_CHARSET') ?: 'utf8mb4');
+}
+
+// SMTP Configuration
+if (!defined('SMTP_HOST')) {
+    define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.ionos.de');
+}
+if (!defined('SMTP_PORT')) {
+    define('SMTP_PORT', (int)($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: 587));
+}
+if (!defined('SMTP_SECURE')) {
+    define('SMTP_SECURE', $_ENV['SMTP_SECURE'] ?? getenv('SMTP_SECURE') ?: 'tls');
+}
+if (!defined('SMTP_USER')) {
+    define('SMTP_USER', $_ENV['SMTP_USER'] ?? getenv('SMTP_USER') ?: 'mail@test.business-consulting.de');
+}
+if (!defined('SMTP_PASS')) {
+    define('SMTP_PASS', $_ENV['SMTP_PASS'] ?? getenv('SMTP_PASS') ?: 'Test12345678.');
+}
+if (!defined('SMTP_FROM_EMAIL')) {
+    define('SMTP_FROM_EMAIL', $_ENV['SMTP_FROM_EMAIL'] ?? getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
+}
+if (!defined('SMTP_FROM_NAME')) {
+    define('SMTP_FROM_NAME', $_ENV['SMTP_FROM_NAME'] ?? getenv('SMTP_FROM_NAME') ?: 'IBC Intranet');
+}
+
+// Site configuration
+if (!defined('SITE_URL')) {
+    define('SITE_URL', $_ENV['SITE_URL'] ?? getenv('SITE_URL') ?: 'https://intra.business-consulting.de');
+}
+
+// Session configuration - needed by db.php but we won't actually use it in CLI
+if (!defined('SESSION_LIFETIME')) {
+    define('SESSION_LIFETIME', 3600 * 24);
+}
+
+// Create database connection manually (avoid loading full db.php which might trigger session)
+try {
+    $dsn = "mysql:host=" . DB_USER_HOST . ";dbname=" . DB_USER_NAME . ";charset=" . DB_CHARSET;
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+    $userPdo = new PDO($dsn, DB_USER_USER, DB_USER_PASS, $options);
+} catch (PDOException $e) {
+    echo "✗ Database connection failed: " . $e->getMessage() . "\n";
+    exit(1);
+}
+
+// Load MailService
 require_once BASE_PATH . '/src/MailService.php';
 
 // Start script
@@ -41,8 +126,7 @@ echo "Date: " . date('Y-m-d H:i:s') . "\n";
 echo "=====================================\n\n";
 
 try {
-    // Get database connection (User-DB for users table)
-    $userPdo = DatabaseManager::getUserConnection();
+    // Database connection already created above (User-DB for users table)
     echo "✓ Connected to User-DB\n\n";
     
     // Get today's day and month
