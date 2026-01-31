@@ -27,9 +27,13 @@ try {
     require_once BASE_PATH . '/src/SystemLogger.php';
 
     // Initialize core services
-    $pdo = DatabaseManager::getConnection();
-    $systemLogger = new SystemLogger($pdo);
-    $auth = new Auth($pdo, $systemLogger);
+    // Two-database architecture:
+    // - Auth uses $userPdo (User Database for authentication)
+    // - SystemLogger uses $contentPdo (Content Database for operational logs)
+    $userPdo = DatabaseManager::getUserConnection();
+    $contentPdo = DatabaseManager::getContentConnection();
+    $systemLogger = new SystemLogger($contentPdo);
+    $auth = new Auth($userPdo, $systemLogger);
 } catch (Throwable $e) {
     // Critical error during initialization - log and return JSON error
     error_log("API Router initialization error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
@@ -212,7 +216,7 @@ try {
         case 'get_helper_requests':
             // Any logged-in user can view helper requests
             require_once BASE_PATH . '/src/NotificationService.php';
-            $notificationService = new NotificationService($pdo);
+            $notificationService = new NotificationService($contentPdo);
             $helperRequests = $notificationService->getNewHelperRequests(10);
             
             logApiRequest($action, 'SUCCESS');
@@ -222,7 +226,7 @@ try {
         case 'mark_notifications_read':
             // Any logged-in user can mark their own notifications as read
             require_once BASE_PATH . '/src/NotificationService.php';
-            $notificationService = new NotificationService($pdo);
+            $notificationService = new NotificationService($contentPdo);
             $userId = $auth->getUserId();
             $result = $notificationService->markHelperUpdatesAsRead($userId);
             
@@ -233,7 +237,7 @@ try {
         case 'check_notification_status':
             // Any logged-in user can check their notification status
             require_once BASE_PATH . '/src/NotificationService.php';
-            $notificationService = new NotificationService($pdo);
+            $notificationService = new NotificationService($contentPdo);
             $userId = $auth->getUserId();
             $hasUpdate = $notificationService->hasHelperUpdate($userId);
             
@@ -248,7 +252,7 @@ try {
         case 'inventory_search':
             // Any logged-in user can search inventory (read-only)
             require_once BASE_PATH . '/src/Inventory.php';
-            $inventory = new Inventory($pdo, $systemLogger);
+            $inventory = new Inventory($contentPdo, $systemLogger);
             
             // Sanitize and validate search input
             $search = null;
@@ -301,7 +305,7 @@ try {
             }
             
             require_once BASE_PATH . '/src/Inventory.php';
-            $inventory = new Inventory($pdo, $systemLogger);
+            $inventory = new Inventory($contentPdo, $systemLogger);
             
             // Validate required fields
             if (empty($_POST['name'])) {
@@ -352,7 +356,7 @@ try {
             }
             
             require_once BASE_PATH . '/src/Inventory.php';
-            $inventory = new Inventory($pdo, $systemLogger);
+            $inventory = new Inventory($contentPdo, $systemLogger);
             
             $itemId = (int)($_POST['id'] ?? 0);
             if (empty($_POST['name']) || $itemId <= 0) {
@@ -409,7 +413,7 @@ try {
             }
             
             require_once BASE_PATH . '/src/Inventory.php';
-            $inventory = new Inventory($pdo, $systemLogger);
+            $inventory = new Inventory($contentPdo, $systemLogger);
             
             $itemId = (int)($_POST['id'] ?? 0);
             if ($itemId <= 0) {

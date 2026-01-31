@@ -113,7 +113,10 @@ foreach ($requiredFiles as $file) {
 
 // Auth initialisieren
 try {
-    $auth = new Auth($pdo);
+    // Two-database architecture:
+    // - Auth uses $userPdo (User Database for authentication)
+    $userPdo = DatabaseManager::getUserConnection();
+    $auth = new Auth($userPdo);
     logMessage("Auth system initialized successfully");
 } catch (Exception $e) {
     logMessage("CRITICAL: Failed to initialize Auth: " . $e->getMessage(), 'CRITICAL');

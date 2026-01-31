@@ -13,9 +13,13 @@ require_once BASE_PATH . '/src/NotificationService.php';
 header('Content-Type: application/json');
 
 // Initialize database and auth
-$pdo = DatabaseManager::getConnection();
-$systemLogger = new SystemLogger($pdo);
-$auth = new Auth($pdo, $systemLogger);
+// Two-database architecture:
+// - Auth uses $userPdo (User Database for authentication)
+// - SystemLogger uses $contentPdo (Content Database for operational logs)
+$userPdo = DatabaseManager::getUserConnection();
+$contentPdo = DatabaseManager::getContentConnection();
+$systemLogger = new SystemLogger($contentPdo);
+$auth = new Auth($userPdo, $systemLogger);
 
 // Check if user is logged in
 if (!$auth->isLoggedIn() || !isset($_SESSION['user_id'])) {
@@ -27,7 +31,7 @@ if (!$auth->isLoggedIn() || !isset($_SESSION['user_id'])) {
 }
 
 $userId = (int)$_SESSION['user_id'];
-$notificationService = new NotificationService($pdo);
+$notificationService = new NotificationService($contentPdo);
 
 // Handle POST requests to clear notifications
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
