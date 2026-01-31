@@ -453,6 +453,8 @@ if ($page === 'home' && $auth->isLoggedIn()) {
     require_once BASE_DIR . '/src/News.php';
     require_once BASE_DIR . '/src/Event.php';
     require_once BASE_DIR . '/src/Project.php';
+    require_once BASE_DIR . '/src/Inventory.php';
+    require_once BASE_DIR . '/src/Alumni.php';
 }
 
 // Determine template file path
