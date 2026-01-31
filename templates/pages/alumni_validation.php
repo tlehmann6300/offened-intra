@@ -353,7 +353,8 @@ document.addEventListener('DOMContentLoaded', function() {
     validationForms.forEach(function(form) {
         form.addEventListener('submit', function(e) {
             const userName = form.getAttribute('data-user-name');
-            const confirmed = confirm('Möchten Sie den Alumni-Status für "' + userName + '" wirklich validieren?');
+            // Use template literal for proper string handling
+            const confirmed = confirm(`Möchten Sie den Alumni-Status für "${userName}" wirklich validieren?`);
             
             if (!confirmed) {
                 e.preventDefault();
