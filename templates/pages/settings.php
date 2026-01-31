@@ -50,6 +50,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $response = ['success' => false, 'message' => 'Fehler beim Speichern der Sichtbarkeitseinstellung'];
             }
             break;
+            
+        case 'update_password':
+            $currentPassword = $_POST['current_password'] ?? '';
+            $newPassword = $_POST['new_password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+            
+            // Validate inputs
+            if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+                $response = ['success' => false, 'message' => 'Alle Felder sind erforderlich.'];
+                break;
+            }
+            
+            // Check if passwords match
+            if ($newPassword !== $confirmPassword) {
+                $response = ['success' => false, 'message' => 'Die neuen Passwörter stimmen nicht überein.'];
+                break;
+            }
+            
+            // Update password
+            $response = $auth->updatePassword($userId, $currentPassword, $newPassword);
+            break;
+            
+        case 'update_email':
+            $newEmail = $_POST['new_email'] ?? '';
+            $password = $_POST['password'] ?? '';
+            
+            // Validate inputs
+            if (empty($newEmail) || empty($password)) {
+                $response = ['success' => false, 'message' => 'E-Mail-Adresse und Passwort sind erforderlich.'];
+                break;
+            }
+            
+            // Update email
+            $response = $auth->updateEmail($userId, $newEmail, $password);
+            
+            // Include the new email in response for UI update
+            if ($response['success']) {
+                $response['new_email'] = $newEmail;
+            }
+            break;
     }
     
     echo json_encode($response);
@@ -116,6 +156,137 @@ if (!$csrfToken) {
             </div>
         </div>
     </div>
+
+    <!-- Account Security Section (for Alumni) -->
+    <?php if ($userRole === 'alumni'): ?>
+    <div class="row mb-4">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Konto-Sicherheit
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Verwalten Sie Ihre E-Mail-Adresse und Ihr Passwort für maximale Sicherheit.
+                    </p>
+                    
+                    <!-- Email Change Section -->
+                    <div class="mb-5">
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-envelope me-2"></i>E-Mail-Adresse ändern
+                        </h6>
+                        <form id="emailChangeForm">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                            <input type="hidden" name="action" value="update_email">
+                            
+                            <div class="mb-3">
+                                <label for="currentEmail" class="form-label">Aktuelle E-Mail-Adresse</label>
+                                <input 
+                                    type="email" 
+                                    class="form-control" 
+                                    id="currentEmail" 
+                                    value="<?php echo htmlspecialchars($auth->getUserEmail(), ENT_QUOTES, 'UTF-8'); ?>" 
+                                    disabled
+                                >
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="newEmail" class="form-label">Neue E-Mail-Adresse <span class="text-danger">*</span></label>
+                                <input 
+                                    type="email" 
+                                    class="form-control" 
+                                    id="newEmail" 
+                                    name="new_email"
+                                    placeholder="neue@email.de"
+                                    required
+                                >
+                                <small class="text-muted">Eine Bestätigung wird an die neue Adresse gesendet.</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="emailPassword" class="form-label">Aktuelles Passwort zur Bestätigung <span class="text-danger">*</span></label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="emailPassword" 
+                                    name="password"
+                                    required
+                                >
+                            </div>
+                            
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save me-2"></i>E-Mail-Adresse ändern
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- Password Change Section -->
+                    <div>
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-key me-2"></i>Passwort ändern
+                        </h6>
+                        <form id="passwordChangeForm">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                            <input type="hidden" name="action" value="update_password">
+                            
+                            <div class="mb-3">
+                                <label for="currentPassword" class="form-label">Aktuelles Passwort <span class="text-danger">*</span></label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="currentPassword" 
+                                    name="current_password"
+                                    required
+                                >
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">Neues Passwort <span class="text-danger">*</span></label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="newPassword" 
+                                    name="new_password"
+                                    required
+                                >
+                                <div class="form-text">
+                                    <strong>Passwort-Anforderungen:</strong>
+                                    <ul class="small mb-0 mt-1">
+                                        <li>Mindestens 12 Zeichen</li>
+                                        <li>Mindestens ein Großbuchstabe (A-Z)</li>
+                                        <li>Mindestens ein Kleinbuchstabe (a-z)</li>
+                                        <li>Mindestens eine Zahl (0-9)</li>
+                                        <li>Mindestens ein Sonderzeichen (!@#$%^&*)</li>
+                                    </ul>
+                                </div>
+                                <div id="passwordStrengthIndicator" class="mt-2"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Neues Passwort bestätigen <span class="text-danger">*</span></label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="confirmPassword" 
+                                    name="confirm_password"
+                                    required
+                                >
+                            </div>
+                            
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-lock me-2"></i>Passwort ändern
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Display & Accessibility Section -->
     <div class="row mb-4">
@@ -326,6 +497,197 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToastLocal('Fehler beim Speichern der Sichtbarkeitseinstellung', 'danger');
                 // Revert toggle on error
                 this.checked = !this.checked;
+            });
+        });
+    }
+    
+    // Password strength indicator
+    const newPasswordInput = document.getElementById('newPassword');
+    if (newPasswordInput) {
+        newPasswordInput.addEventListener('input', function() {
+            const password = this.value;
+            const indicator = document.getElementById('passwordStrengthIndicator');
+            
+            if (password.length === 0) {
+                indicator.innerHTML = '';
+                return;
+            }
+            
+            let strength = 0;
+            let feedback = [];
+            
+            // Check length
+            if (password.length >= 12) {
+                strength += 20;
+            } else {
+                feedback.push('Mindestens 12 Zeichen');
+            }
+            
+            // Check for uppercase
+            if (/[A-Z]/.test(password)) {
+                strength += 20;
+            } else {
+                feedback.push('Ein Großbuchstabe');
+            }
+            
+            // Check for lowercase
+            if (/[a-z]/.test(password)) {
+                strength += 20;
+            } else {
+                feedback.push('Ein Kleinbuchstabe');
+            }
+            
+            // Check for number
+            if (/[0-9]/.test(password)) {
+                strength += 20;
+            } else {
+                feedback.push('Eine Zahl');
+            }
+            
+            // Check for special character
+            if (/[^A-Za-z0-9]/.test(password)) {
+                strength += 20;
+            } else {
+                feedback.push('Ein Sonderzeichen');
+            }
+            
+            let strengthClass = 'danger';
+            let strengthText = 'Schwach';
+            
+            if (strength >= 100) {
+                strengthClass = 'success';
+                strengthText = 'Stark';
+            } else if (strength >= 60) {
+                strengthClass = 'warning';
+                strengthText = 'Mittel';
+            }
+            
+            let html = '<div class="progress" style="height: 5px;">';
+            html += `<div class="progress-bar bg-${strengthClass}" role="progressbar" style="width: ${strength}%" aria-valuenow="${strength}" aria-valuemin="0" aria-valuemax="100"></div>`;
+            html += '</div>';
+            html += `<small class="text-${strengthClass}"><strong>${strengthText}</strong></small>`;
+            
+            if (feedback.length > 0) {
+                html += '<br><small class="text-muted">Fehlt noch: ' + feedback.join(', ') + '</small>';
+            }
+            
+            indicator.innerHTML = html;
+        });
+    }
+    
+    // Handle email change form
+    const emailChangeForm = document.getElementById('emailChangeForm');
+    if (emailChangeForm) {
+        emailChangeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Wird geändert...';
+            
+            const formData = new FormData(this);
+            
+            fetch('index.php?page=settings', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToastLocal(data.message, 'success');
+                    // Update the displayed current email using the value from server response
+                    if (data.new_email) {
+                        document.getElementById('currentEmail').value = data.new_email;
+                    }
+                    // Reset form on success
+                    document.getElementById('newEmail').value = '';
+                    document.getElementById('emailPassword').value = '';
+                } else {
+                    showToastLocal(data.message || 'Fehler beim Ändern der E-Mail-Adresse', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToastLocal('Fehler beim Ändern der E-Mail-Adresse', 'danger');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            });
+        });
+    }
+    
+    // Handle password change form
+    const passwordChangeForm = document.getElementById('passwordChangeForm');
+    if (passwordChangeForm) {
+        passwordChangeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Client-side validation
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                showToastLocal('Die neuen Passwörter stimmen nicht überein.', 'danger');
+                return;
+            }
+            
+            // Validate password strength
+            if (newPassword.length < 12) {
+                showToastLocal('Das Passwort muss mindestens 12 Zeichen lang sein.', 'danger');
+                return;
+            }
+            
+            if (!/[A-Z]/.test(newPassword)) {
+                showToastLocal('Das Passwort muss mindestens einen Großbuchstaben enthalten.', 'danger');
+                return;
+            }
+            
+            if (!/[a-z]/.test(newPassword)) {
+                showToastLocal('Das Passwort muss mindestens einen Kleinbuchstaben enthalten.', 'danger');
+                return;
+            }
+            
+            if (!/[0-9]/.test(newPassword)) {
+                showToastLocal('Das Passwort muss mindestens eine Zahl enthalten.', 'danger');
+                return;
+            }
+            
+            if (!/[^A-Za-z0-9]/.test(newPassword)) {
+                showToastLocal('Das Passwort muss mindestens ein Sonderzeichen enthalten.', 'danger');
+                return;
+            }
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Wird geändert...';
+            
+            const formData = new FormData(this);
+            
+            fetch('index.php?page=settings', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToastLocal(data.message, 'success');
+                    // Reset form on success
+                    this.reset();
+                    document.getElementById('passwordStrengthIndicator').innerHTML = '';
+                } else {
+                    showToastLocal(data.message || 'Fehler beim Ändern des Passworts', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToastLocal('Fehler beim Ändern des Passworts', 'danger');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
             });
         });
     }
