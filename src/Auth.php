@@ -3,7 +3,37 @@ declare(strict_types=1);
 
 /**
  * Authentication Class
- * Handles user authentication and session management
+ * 
+ * Handles hybrid user authentication and session management with support for:
+ * 
+ * 1. HYBRID AUTHENTICATION SYSTEM:
+ *    - Microsoft SSO (for Vorstand/Board members): Use loginWithMicrosoft()
+ *    - Email/Password (for Alumni): Use loginWithPassword() or login()
+ * 
+ * 2. USER MANAGEMENT (Board/Vorstand only):
+ *    - Create Alumni accounts with email/password via createAlumniAccount()
+ *    - Requires 'vorstand' or 'admin' role
+ * 
+ * 3. SELF-SERVICE (Alumni users):
+ *    - Change email via updateEmail() with password verification
+ *    - Change password via updatePassword() with current password verification
+ *    - Password strength validation via validatePasswordStrength()
+ * 
+ * 4. SECURITY FEATURES:
+ *    - Rate limiting (5 attempts per 15 minutes)
+ *    - Session validation across User database via validateSessionConsistency()
+ *    - CSRF token generation and validation
+ *    - Secure password hashing with password_hash()
+ *    - Role-based access control with hierarchy
+ * 
+ * DATABASE ARCHITECTURE:
+ * - User Database: Stores all user accounts (both SSO and password-based)
+ * - Content Database: Stores projects, inventory, events, news
+ * 
+ * AUTHENTICATION METHODS:
+ * - 'microsoft': Microsoft SSO authentication (Vorstand)
+ * - 'password': Email/Password authentication (Alumni)
+ * 
  * Implements secure login with prepared statements and detailed error handling
  */
 class Auth {
@@ -175,7 +205,8 @@ class Auth {
 
     /**
      * Login method with strict database authentication
-     * Only allows users from the database with valid password hashes
+     * This is the main entry point for password-based authentication (Alumni)
+     * For Microsoft SSO (Vorstand), use loginWithMicrosoft() method instead
      * 
      * @param string $username Username or email
      * @param string $password Password
@@ -183,16 +214,31 @@ class Auth {
      * @return array Result array with 'success' (bool) and 'message' (string)
      */
     public function login(string $username, string $password, ?string $recaptchaResponse = null): array {
+        // Delegate to password-based authentication method
+        return $this->loginWithPassword($username, $password, $recaptchaResponse);
+    }
+    
+    /**
+     * Password-based authentication for Alumni users
+     * Validates email and password against the User database
+     * Only works for users with password set (Alumni with email/password login)
+     * 
+     * @param string $email Email address
+     * @param string $password Password
+     * @param string|null $recaptchaResponse reCAPTCHA response token (optional for now)
+     * @return array Result array with 'success' (bool) and 'message' (string)
+     */
+    public function loginWithPassword(string $email, string $password, ?string $recaptchaResponse = null): array {
         try {
             // Get client IP for rate limiting
             $clientIp = $this->getClientIp();
             
             // Check rate limiting
             if ($this->isRateLimited($clientIp)) {
-                $this->log("Login blocked: Rate limit exceeded for IP: " . $clientIp);
+                $this->log("Password login blocked: Rate limit exceeded for IP: " . $clientIp);
                 // Log to SystemLogger if available
                 if ($this->systemLogger) {
-                    $this->systemLogger->logLoginAttempt($username, false, null, 'Rate limit exceeded');
+                    $this->systemLogger->logLoginAttempt($email, false, null, 'Rate limit exceeded');
                 }
                 $waitMinutes = (int)ceil(self::RATE_LIMIT_WINDOW / 60);
                 return [
@@ -202,94 +248,211 @@ class Auth {
             }
             
             // Log login attempt
-            $this->log("Login attempt for user: " . $username);
+            $this->log("Password login attempt for user: " . $email);
             
             // Sanitize input
-            $username = trim($username);
+            $email = trim($email);
             $password = trim($password);
             
             // Check for empty credentials
-            if (empty($username) || empty($password)) {
-                $this->log("Login failed: Empty credentials for user: " . $username);
+            if (empty($email) || empty($password)) {
+                $this->log("Password login failed: Empty credentials for user: " . $email);
                 // Log to SystemLogger if available
                 if ($this->systemLogger) {
-                    $this->systemLogger->logLoginAttempt($username, false, null, 'Empty credentials');
+                    $this->systemLogger->logLoginAttempt($email, false, null, 'Empty credentials');
                 }
                 return [
                     'success' => false,
-                    'message' => 'Bitte geben Sie Nutzername und Passwort ein.'
+                    'message' => 'Bitte geben Sie E-Mail und Passwort ein.'
                 ];
             }
             
-            // Strict database authentication - fetch user from database
+            // Validate email format
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->log("Password login failed: Invalid email format: " . $email);
+                return [
+                    'success' => false,
+                    'message' => 'Ungültige E-Mail-Adresse.'
+                ];
+            }
+            
+            // Fetch user from database
             $stmt = $this->pdo->prepare("SELECT id, email, role, password, firstname, lastname FROM users WHERE email = ?");
-            $stmt->execute([$username]);
+            $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$user) {
-                $this->log("Login failed: User not found: " . $username);
+                $this->log("Password login failed: User not found: " . $email);
                 // Record failed attempt for rate limiting
                 $this->recordLoginAttempt($clientIp);
                 // Log to SystemLogger if available
                 if ($this->systemLogger) {
-                    $this->systemLogger->logLoginAttempt($username, false, null, 'User not found');
+                    $this->systemLogger->logLoginAttempt($email, false, null, 'User not found');
                 }
                 return [
                     'success' => false,
-                    'message' => 'Ungültige Anmeldedaten. Bitte überprüfen Sie Nutzername und Passwort.'
+                    'message' => 'Ungültige Anmeldedaten. Bitte überprüfen Sie E-Mail und Passwort.'
                 ];
             }
             
-            // Check if user has a password set (for manual authentication)
-            if (!empty($user['password'])) {
-                // Verify password hash
-                if (password_verify($password, $user['password'])) {
-                    // Log successful login
-                    if ($this->systemLogger) {
-                        $this->systemLogger->logLoginAttempt($username, true, (int)$user['id'], null);
-                    }
-                    return $this->createUserSession($user, 'manual');
-                } else {
-                    $this->log("Login failed: Invalid password for user: " . $username);
-                    // Record failed attempt for rate limiting
-                    $this->recordLoginAttempt($clientIp);
-                    // Log to SystemLogger if available
-                    if ($this->systemLogger) {
-                        $this->systemLogger->logLoginAttempt($username, false, (int)$user['id'], 'Invalid password');
-                    }
-                    return [
-                        'success' => false,
-                        'message' => 'Ungültiges Passwort. Bitte versuchen Sie es erneut.'
-                    ];
+            // Check if user has a password set (required for password-based authentication)
+            if (empty($user['password'])) {
+                $this->log("Password login failed: No password set for user: " . $email);
+                // Log to SystemLogger if available
+                if ($this->systemLogger) {
+                    $this->systemLogger->logLoginAttempt($email, false, (int)$user['id'], 'No password set - SSO required');
                 }
+                return [
+                    'success' => false,
+                    'message' => 'Für dieses Konto ist kein Passwort gesetzt. Bitte verwenden Sie Microsoft SSO zur Anmeldung.'
+                ];
             }
             
-            // No password set - user must use Microsoft SSO
-            $this->log("Login failed: No password set for user: " . $username);
-            // Log to SystemLogger if available
-            if ($this->systemLogger) {
-                $this->systemLogger->logLoginAttempt($username, false, (int)$user['id'], 'No password set - SSO required');
+            // Verify password hash
+            if (!password_verify($password, $user['password'])) {
+                $this->log("Password login failed: Invalid password for user: " . $email);
+                // Record failed attempt for rate limiting
+                $this->recordLoginAttempt($clientIp);
+                // Log to SystemLogger if available
+                if ($this->systemLogger) {
+                    $this->systemLogger->logLoginAttempt($email, false, (int)$user['id'], 'Invalid password');
+                }
+                return [
+                    'success' => false,
+                    'message' => 'Ungültiges Passwort. Bitte versuchen Sie es erneut.'
+                ];
             }
-            return [
-                'success' => false,
-                'message' => 'Bitte verwenden Sie Microsoft SSO zur Anmeldung.'
-            ];
+            
+            // Password verified successfully - create session
+            // Log successful login
+            if ($this->systemLogger) {
+                $this->systemLogger->logLoginAttempt($email, true, (int)$user['id'], null);
+            }
+            return $this->createUserSession($user, 'password');
             
         } catch (PDOException $e) {
-            $this->log("Database error during login: " . $e->getMessage());
+            $this->log("Database error during password login: " . $e->getMessage());
             // Log to SystemLogger if available
             if ($this->systemLogger) {
-                $this->systemLogger->logLoginAttempt($username, false, null, 'Database error');
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Database error');
             }
             return [
                 'success' => false,
                 'message' => 'Ein Datenbankfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
             ];
         } catch (Exception $e) {
-            $this->log("Unexpected error during login: " . $e->getMessage());
+            $this->log("Unexpected error during password login: " . $e->getMessage());
             // Log to SystemLogger if available
             if ($this->systemLogger) {
-                $this->systemLogger->logLoginAttempt($username, false, null, 'Unexpected error');
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Unexpected error');
+            }
+            return [
+                'success' => false,
+                'message' => 'Ein unerwarteter Fehler ist aufgetreten. Bitte kontaktieren Sie den Administrator.'
+            ];
+        }
+    }
+    
+    /**
+     * Microsoft SSO authentication for Vorstand (Board members)
+     * This method should be called from the Microsoft callback handler
+     * after the OAuth2 flow has been completed and user information extracted
+     * 
+     * @param string $email Email from Microsoft account
+     * @param string $firstname First name from Microsoft account
+     * @param string $lastname Last name from Microsoft account
+     * @param string $microsoftId Microsoft user ID (sub or oid from token)
+     * @return array Result array with 'success' (bool), 'message' (string), and optionally 'user' (array)
+     */
+    public function loginWithMicrosoft(string $email, string $firstname, string $lastname, string $microsoftId): array {
+        try {
+            $this->log("Microsoft SSO login attempt for user: " . $email);
+            
+            // Sanitize inputs
+            $email = trim($email);
+            $firstname = trim($firstname);
+            $lastname = trim($lastname);
+            $microsoftId = trim($microsoftId);
+            
+            // Validate email format
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->log("Microsoft SSO failed: Invalid email format: " . $email);
+                return [
+                    'success' => false,
+                    'message' => 'Ungültige E-Mail-Adresse vom Microsoft-Konto.'
+                ];
+            }
+            
+            // Check if user exists in database
+            $stmt = $this->pdo->prepare("SELECT id, email, role, firstname, lastname, password FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                // Existing user - log them in
+                $this->log("Microsoft SSO: Existing user found - ID: {$user['id']}, Role: {$user['role']}");
+                
+                // Log successful login
+                if ($this->systemLogger) {
+                    $this->systemLogger->logLoginAttempt($email, true, (int)$user['id'], 'Microsoft SSO');
+                }
+                
+                // Create session
+                $result = $this->createUserSession($user, 'microsoft');
+                $result['user'] = $user;
+                $result['is_new_user'] = false;
+                
+                return $result;
+                
+            } else {
+                // User doesn't exist - create new account with 'vorstand' role
+                // Microsoft SSO users are typically board members (Vorstand)
+                $this->log("Microsoft SSO: Creating new user account for {$email}");
+                
+                // Insert new user without password (SSO-only account)
+                // New SSO users get 'vorstand' role by default
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO users (email, firstname, lastname, role, created_at, updated_at) 
+                    VALUES (?, ?, ?, 'vorstand', NOW(), NOW())
+                ");
+                $stmt->execute([$email, $firstname, $lastname]);
+                $newUserId = (int)$this->pdo->lastInsertId();
+                
+                $this->log("Microsoft SSO: New user created - ID: {$newUserId}, Email: {$email}, Role: vorstand");
+                
+                // Fetch the newly created user
+                $stmt = $this->pdo->prepare("SELECT id, email, role, firstname, lastname FROM users WHERE id = ?");
+                $stmt->execute([$newUserId]);
+                $newUser = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // Log successful login
+                if ($this->systemLogger) {
+                    $this->systemLogger->logLoginAttempt($email, true, $newUserId, 'Microsoft SSO - New user');
+                }
+                
+                // Create session
+                $result = $this->createUserSession($newUser, 'microsoft');
+                $result['user'] = $newUser;
+                $result['is_new_user'] = true;
+                
+                return $result;
+            }
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during Microsoft SSO login: " . $e->getMessage());
+            // Log to SystemLogger if available
+            if ($this->systemLogger) {
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Database error during SSO');
+            }
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+            ];
+        } catch (Exception $e) {
+            $this->log("Unexpected error during Microsoft SSO login: " . $e->getMessage());
+            // Log to SystemLogger if available
+            if ($this->systemLogger) {
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Unexpected error during SSO');
             }
             return [
                 'success' => false,
@@ -302,7 +465,7 @@ class Auth {
      * Create user session after successful authentication
      * 
      * @param array $user User data from database
-     * @param string $authMethod Authentication method (manual, microsoft)
+     * @param string $authMethod Authentication method (password, microsoft)
      * @return array Result array
      */
     private function createUserSession(array $user, string $authMethod): array {
@@ -328,6 +491,84 @@ class Auth {
             'success' => true,
             'message' => 'Login erfolgreich!'
         ];
+    }
+    
+    /**
+     * Validate session consistency across databases
+     * Ensures session data matches the user database to prevent session hijacking
+     * This method should be called on each request to verify session integrity
+     * 
+     * @return array Result with 'valid' (bool), 'message' (string), and optionally 'user' (array)
+     */
+    public function validateSessionConsistency(): array {
+        try {
+            // Check if user is logged in
+            if (!$this->isLoggedIn()) {
+                return [
+                    'valid' => false,
+                    'message' => 'Nicht angemeldet.'
+                ];
+            }
+            
+            $userId = $_SESSION['user_id'];
+            $sessionEmail = $_SESSION['email'] ?? null;
+            $sessionRole = $_SESSION['role'] ?? null;
+            
+            // Fetch current user data from User database
+            $stmt = $this->pdo->prepare("
+                SELECT id, email, role, firstname, lastname 
+                FROM users 
+                WHERE id = ?
+            ");
+            $stmt->execute([$userId]);
+            $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Check if user still exists in database
+            if (!$dbUser) {
+                $this->log("Session validation failed: User ID {$userId} not found in database");
+                return [
+                    'valid' => false,
+                    'message' => 'Benutzerkonto nicht gefunden. Bitte melden Sie sich erneut an.'
+                ];
+            }
+            
+            // Check if email matches (critical for security)
+            if ($sessionEmail !== $dbUser['email']) {
+                $this->log("Session validation failed: Email mismatch for user ID {$userId}. Session: {$sessionEmail}, DB: {$dbUser['email']}");
+                return [
+                    'valid' => false,
+                    'message' => 'Session-Inkonsistenz erkannt. Bitte melden Sie sich erneut an.'
+                ];
+            }
+            
+            // Check if role matches (important for access control)
+            if ($sessionRole !== $dbUser['role']) {
+                $this->log("Session validation: Role changed for user ID {$userId}. Session: {$sessionRole}, DB: {$dbUser['role']}. Updating session.");
+                // Update session with new role from database
+                $_SESSION['role'] = $dbUser['role'];
+            }
+            
+            // Update session data if user info changed
+            if (($_SESSION['firstname'] ?? '') !== ($dbUser['firstname'] ?? '')) {
+                $_SESSION['firstname'] = $dbUser['firstname'] ?? '';
+            }
+            if (($_SESSION['lastname'] ?? '') !== ($dbUser['lastname'] ?? '')) {
+                $_SESSION['lastname'] = $dbUser['lastname'] ?? '';
+            }
+            
+            return [
+                'valid' => true,
+                'message' => 'Session gültig.',
+                'user' => $dbUser
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during session validation: " . $e->getMessage());
+            return [
+                'valid' => false,
+                'message' => 'Fehler bei der Session-Validierung.'
+            ];
+        }
     }
     
     /**
@@ -396,6 +637,15 @@ class Auth {
      */
     public function getUserEmail(): ?string {
         return $_SESSION['email'] ?? null;
+    }
+    
+    /**
+     * Get current authentication method
+     * 
+     * @return string|null Authentication method ('password' or 'microsoft') or null if not logged in
+     */
+    public function getAuthMethod(): ?string {
+        return $_SESSION['auth_method'] ?? null;
     }
     
     /**

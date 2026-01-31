@@ -151,6 +151,30 @@ try {
     
     logMessage("Microsoft SSO: User info extracted - Email: {$userEmail}, Name: {$userName}");
     
+    // Parse name into first and last name
+    $nameParts = explode(' ', $userName, 2);
+    $firstname = $nameParts[0] ?? '';
+    $lastname = $nameParts[1] ?? '';
+    
+    // Use Auth class loginWithMicrosoft method if available
+    if (isset($auth) && method_exists($auth, 'loginWithMicrosoft')) {
+        $loginResult = $auth->loginWithMicrosoft($userEmail, $firstname, $lastname, $microsoftId);
+        
+        if ($loginResult['success']) {
+            logMessage("Microsoft SSO: Login successful via Auth::loginWithMicrosoft()");
+            // Redirect to home page
+            header('Location: index.php?page=home&login=success');
+            exit;
+        } else {
+            logMessage("Microsoft SSO Error: Login failed - " . $loginResult['message'], 'ERROR');
+            header('Location: index.php?page=login&error=sso_login_failed');
+            exit;
+        }
+    }
+    
+    // Fallback: Manual session creation if Auth class not available
+    logMessage("Microsoft SSO: Auth class not available, using fallback session creation");
+    
     // Check if user exists in database
     $stmt = $pdo->prepare("SELECT id, email, role, firstname, lastname FROM users WHERE email = ?");
     $stmt->execute([$userEmail]);
@@ -168,12 +192,8 @@ try {
         $_SESSION['last_activity'] = time();
         $_SESSION['auth_method'] = 'microsoft';
         
-        // Generate CSRF token using Auth class method if available, otherwise fallback
-        if (isset($auth)) {
-            $auth->generateCsrfToken();
-        } else {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
+        // Generate CSRF token
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         
         // Regenerate session ID for security
         session_regenerate_id(true);
@@ -185,37 +205,28 @@ try {
         logMessage("Microsoft SSO: Creating new user account for {$userEmail}");
         
         try {
-            // Parse name into first and last name
-            $nameParts = explode(' ', $userName, 2);
-            $firstname = $nameParts[0] ?? '';
-            $lastname = $nameParts[1] ?? '';
-            
             // Insert new user with firstname and lastname into users table
-            // Role 'mitglied' is the default lowest privilege level
+            // Role 'vorstand' for Microsoft SSO users (board members)
             $stmt = $pdo->prepare("
                 INSERT INTO users (email, firstname, lastname, role, created_at, updated_at) 
-                VALUES (?, ?, ?, 'mitglied', NOW(), NOW())
+                VALUES (?, ?, ?, 'vorstand', NOW(), NOW())
             ");
             $stmt->execute([$userEmail, $firstname, $lastname]);
             $newUserId = (int)$pdo->lastInsertId();
             
-            logMessage("Microsoft SSO: New user created - ID: {$newUserId}, Email: {$userEmail}");
+            logMessage("Microsoft SSO: New user created - ID: {$newUserId}, Email: {$userEmail}, Role: vorstand");
             
             // Create session for new user with all necessary data
             $_SESSION['user_id'] = $newUserId;
-            $_SESSION['role'] = 'mitglied';
+            $_SESSION['role'] = 'vorstand';
             $_SESSION['email'] = $userEmail;
             $_SESSION['firstname'] = $firstname;
             $_SESSION['lastname'] = $lastname;
             $_SESSION['last_activity'] = time();
             $_SESSION['auth_method'] = 'microsoft';
             
-            // Generate CSRF token using Auth class method if available, otherwise fallback
-            if (isset($auth)) {
-                $auth->generateCsrfToken();
-            } else {
-                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            }
+            // Generate CSRF token
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             
             // Regenerate session ID for security
             session_regenerate_id(true);
