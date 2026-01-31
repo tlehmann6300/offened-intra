@@ -51,6 +51,8 @@ login_debug.txt
 !migrations/*.sql
 !01_schema.sql
 !02_data_dump.sql
+!user_db_setup.sql
+!content_db_setup.sql
 
 # Vendor dependencies (composer packages)
 vendor/
