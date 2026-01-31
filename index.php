@@ -520,7 +520,7 @@ try {
     $content = ob_get_clean();
     
     // Load header and footer for all pages except special cases
-    $pagesWithoutLayout = ['login', 'landing'];
+    $pagesWithoutLayout = ['login', 'landing', 'register'];
     
     if (!in_array($page, $pagesWithoutLayout, true)) {
         // Include header
