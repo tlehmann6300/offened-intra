@@ -12,13 +12,15 @@ Die neue Rollen-Hierarchie wurde wie folgt implementiert:
 Admin (8) > Vorstand (7) > 1V (6) > 2V (5) > 3V (4) > Ressortleiter (3) > Mitglied (2) > Alumni (1) > None (0)
 ```
 
+**Hinweis**: Die Rollen 1V, 2V, 3V sind spezifische Vorstandspositionen unterhalb der allgemeinen "Vorstand"-Rolle. In der Praxis sollten Benutzer entweder "vorstand" (höchste Vorstandsrolle) ODER eine der spezifischen Positionen (1V, 2V, 3V) haben, nicht beides.
+
 ### Rollen-Beschreibung
 
 - **Admin (8)**: Vollständiger Systemzugriff
-- **Vorstand (7)**: Vorstandsmitglied (allgemein)
-- **1V (6)**: Erster Vorstand
-- **2V (5)**: Zweiter Vorstand  
-- **3V (4)**: Dritter Vorstand
+- **Vorstand (7)**: Vorstandsmitglied (allgemein, höchste Vorstandsrolle)
+- **1V (6)**: Erster Vorstand (spezifische Position)
+- **2V (5)**: Zweiter Vorstand (spezifische Position)
+- **3V (4)**: Dritter Vorstand (spezifische Position)
 - **Ressortleiter (3)**: Abteilungsleiter
 - **Mitglied (2)**: Reguläres Mitglied
 - **Alumni (1)**: Alumni-Mitglied (niedrigste aktive Rolle, benötigt Validierung)

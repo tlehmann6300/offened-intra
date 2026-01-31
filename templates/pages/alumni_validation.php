@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['validate_alumni'])) {
                                         <?= date('d.m.Y', strtotime($alumni['created_at'])) ?>
                                     </td>
                                     <td>
-                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Möchten Sie diesen Alumni-Status wirklich validieren?');">
+                                        <form method="POST" class="validation-form" data-user-name="<?= htmlspecialchars($alumni['firstname'] . ' ' . $alumni['lastname']) ?>">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($auth->generateCsrfToken()) ?>">
                                             <input type="hidden" name="user_id" value="<?= $alumni['id'] ?>">
                                             <button type="submit" name="validate_alumni" class="btn btn-primary btn-sm">
@@ -339,4 +339,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['validate_alumni'])) {
     font-family: monospace;
     font-size: 0.9em;
 }
+
+.validation-form {
+    display: inline;
+}
 </style>
+
+<script>
+// Unobtrusive JavaScript for form validation confirmation
+document.addEventListener('DOMContentLoaded', function() {
+    const validationForms = document.querySelectorAll('.validation-form');
+    
+    validationForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const userName = form.getAttribute('data-user-name');
+            const confirmed = confirm('Möchten Sie den Alumni-Status für "' + userName + '" wirklich validieren?');
+            
+            if (!confirmed) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
+});
+</script>

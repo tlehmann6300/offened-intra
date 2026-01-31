@@ -924,6 +924,10 @@ class Auth {
     /**
      * Update user role in database
      * 
+     * Note: When an admin updates another user's role, that user will need to 
+     * log out and back in to see the role change reflected in their session.
+     * This is intentional to prevent session hijacking scenarios.
+     * 
      * @param int $userId User ID
      * @param string $role New role to set
      * @return bool True on success, false on failure
@@ -941,7 +945,8 @@ class Auth {
             $result = $stmt->execute([$role, $userId]);
             
             if ($result) {
-                // Update session role as well if updating current user
+                // Update session role only if updating current user's own role
+                // Other users will need to log out and back in to see the change
                 if ($userId === $this->getUserId()) {
                     $_SESSION['role'] = $role;
                 }

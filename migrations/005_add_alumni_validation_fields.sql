@@ -28,9 +28,9 @@ ADD COLUMN alumni_status_requested_at TIMESTAMP NULL DEFAULT NULL
 COMMENT 'Timestamp when user requested alumni status transition';
 
 -- Create index for efficient alumni validation queries
+-- Note: This index helps optimize queries filtering by role='alumni' and is_alumni_validated
 CREATE INDEX idx_alumni_validation 
-ON users(role, is_alumni_validated) 
-WHERE role = 'alumni';
+ON users(role, is_alumni_validated);
 
 -- Update existing alumni users to validated status (grandfathered in)
 -- This prevents breaking existing alumni accounts
