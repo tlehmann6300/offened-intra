@@ -12,11 +12,22 @@ use PHPMailer\PHPMailer\Exception;
  * @requires PHP 8.0+ (uses typed properties and union types)
  */
 class HelperService {
-    private PDO $pdo;
+    private PDO $pdoContent;
+    private PDO $pdoUser;
     private string $logFile;
+    private ?MailService $mailService = null;
     
-    public function __construct(PDO $pdo) {
-        $this->pdo = $pdo;
+    /**
+     * Constructor
+     * 
+     * @param PDO $pdoContent Content database connection (for event_helper tables)
+     * @param PDO $pdoUser User database connection (for users table)
+     * @param MailService|null $mailService Optional MailService instance for sending emails
+     */
+    public function __construct(PDO $pdoContent, PDO $pdoUser, ?MailService $mailService = null) {
+        $this->pdoContent = $pdoContent;
+        $this->pdoUser = $pdoUser;
+        $this->mailService = $mailService;
         $this->logFile = BASE_PATH . '/logs/app.log';
         
         // Ensure logs directory exists
@@ -34,7 +45,7 @@ class HelperService {
      */
     public function getHelperSlotsByEvent(int $eventId): array {
         try {
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 SELECT 
                     s.id,
                     s.event_id,
@@ -73,7 +84,7 @@ class HelperService {
         }
         
         try {
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 SELECT COUNT(*) as count
                 FROM event_helper_registrations
                 WHERE slot_id = ? AND user_id = ?
@@ -101,10 +112,10 @@ class HelperService {
     public function registerForSlot(int $slotId, int $userId): array {
         try {
             // Start transaction to prevent race conditions
-            $this->pdo->beginTransaction();
+            $this->pdoContent->beginTransaction();
             
             // Lock the slot row with SELECT FOR UPDATE to prevent concurrent modifications
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 SELECT id, slots_max
                 FROM event_helper_slots
                 WHERE id = ?
@@ -114,7 +125,7 @@ class HelperService {
             $slot = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$slot) {
-                $this->pdo->rollBack();
+                $this->pdoContent->rollBack();
                 return [
                     'success' => false,
                     'message' => 'Slot nicht gefunden'
@@ -122,7 +133,7 @@ class HelperService {
             }
             
             // Check if user is already registered
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 SELECT COUNT(*) as count
                 FROM event_helper_registrations
                 WHERE slot_id = ? AND user_id = ?
@@ -131,7 +142,7 @@ class HelperService {
             $existing = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($existing && $existing['count'] > 0) {
-                $this->pdo->rollBack();
+                $this->pdoContent->rollBack();
                 return [
                     'success' => false,
                     'message' => 'Sie sind bereits für diesen Slot angemeldet'
@@ -139,7 +150,7 @@ class HelperService {
             }
             
             // Count current registrations for this slot (with lock to ensure consistent read)
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 SELECT COUNT(*) as slots_registered
                 FROM event_helper_registrations
                 WHERE slot_id = ?
@@ -151,7 +162,7 @@ class HelperService {
             
             // Check if slot is full: only insert if slots_registered < slots_max
             if ($slots_registered >= $slot['slots_max']) {
-                $this->pdo->rollBack();
+                $this->pdoContent->rollBack();
                 return [
                     'success' => false,
                     'message' => 'Slot bereits voll'
@@ -159,7 +170,7 @@ class HelperService {
             }
             
             // Register user for slot
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 INSERT INTO event_helper_registrations (slot_id, user_id)
                 VALUES (?, ?)
             ");
@@ -168,7 +179,7 @@ class HelperService {
             
             if ($result) {
                 // Commit transaction
-                $this->pdo->commit();
+                $this->pdoContent->commit();
                 
                 // Get updated slot info
                 $updatedSlot = $this->getSlotInfo($slotId);
@@ -185,7 +196,7 @@ class HelperService {
                 ];
             }
             
-            $this->pdo->rollBack();
+            $this->pdoContent->rollBack();
             return [
                 'success' => false,
                 'message' => 'Anmeldung fehlgeschlagen'
@@ -193,8 +204,8 @@ class HelperService {
             
         } catch (PDOException $e) {
             // Rollback transaction on error
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
+            if ($this->pdoContent->inTransaction()) {
+                $this->pdoContent->rollBack();
             }
             
             error_log("Error registering for slot: " . $e->getMessage());
@@ -223,7 +234,7 @@ class HelperService {
      */
     public function unregisterFromSlot(int $slotId, int $userId): array {
         try {
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 DELETE FROM event_helper_registrations
                 WHERE slot_id = ? AND user_id = ?
             ");
@@ -265,7 +276,7 @@ class HelperService {
      */
     private function getSlotInfo(int $slotId): array {
         try {
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 SELECT 
                     s.id,
                     s.event_id,
@@ -300,14 +311,18 @@ class HelperService {
      */
     private function sendHelperConfirmationEmail(int $slotId, int $userId): bool {
         try {
-            // Check if PHPMailer is available
-            if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-                $this->log("Warning: PHPMailer not available for helper confirmation email");
-                return false;
+            // If no MailService is available, try to create one
+            if ($this->mailService === null) {
+                if (class_exists('MailService')) {
+                    $this->mailService = new MailService();
+                } else {
+                    $this->log("Warning: MailService not available for helper confirmation email");
+                    return false;
+                }
             }
             
             // Get slot and event information
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoContent->prepare("
                 SELECT 
                     s.task_name,
                     s.start_time,
@@ -329,7 +344,7 @@ class HelperService {
             }
             
             // Get user email and name
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdoUser->prepare("
                 SELECT email, firstname, lastname
                 FROM users
                 WHERE id = ?
@@ -346,8 +361,8 @@ class HelperService {
             $emailSubject = "Bestätigung: Helfer-Anmeldung für " . $slotData['event_title'];
             $emailHtml = $this->generateHelperConfirmationEmailHtml($slotData, $userData);
             
-            // Send email
-            $result = $this->sendEmail(
+            // Send email using MailService
+            $result = $this->mailService->sendEmail(
                 $userData['email'],
                 $emailSubject,
                 $emailHtml,
@@ -502,50 +517,6 @@ class HelperService {
 </html>';
         
         return $html;
-    }
-    
-    /**
-     * Send email using PHPMailer with SMTP
-     * 
-     * @param string $to Recipient email address
-     * @param string $subject Email subject
-     * @param string $htmlBody HTML email body
-     * @param string $recipientName Recipient name
-     * @return bool Success status
-     */
-    private function sendEmail(string $to, string $subject, string $htmlBody, string $recipientName = ''): bool {
-        try {
-            $mail = new PHPMailer(true);
-            
-            // Server settings
-            $mail->isSMTP();
-            $mail->Host       = SMTP_HOST;
-            $mail->SMTPAuth   = true;
-            $mail->Username   = SMTP_USER;
-            $mail->Password   = SMTP_PASS;
-            $mail->SMTPSecure = SMTP_SECURE;
-            $mail->Port       = SMTP_PORT;
-            $mail->CharSet    = 'UTF-8';
-            
-            // Recipients
-            $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-            $mail->addAddress($to, $recipientName);
-            
-            // Content
-            $mail->isHTML(true);
-            $mail->Subject = $subject;
-            $mail->Body    = $htmlBody;
-            
-            // Generate plain text alternative
-            $plainText = strip_tags(str_replace(['</p>', '<br>', '<br/>', '<br />'], "\n\n", $htmlBody));
-            $mail->AltBody = $plainText;
-            
-            $mail->send();
-            return true;
-        } catch (Exception $e) {
-            $this->log("Email send failed to {$to}: {$mail->ErrorInfo}");
-            return false;
-        }
     }
     
     /**

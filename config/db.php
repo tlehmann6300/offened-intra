@@ -13,34 +13,95 @@ if (file_exists(__DIR__ . '/../.env')) {
     $dotenv->load();
 }
 
-// Database credentials from environment variables
-define('DB_HOST', $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'db5010762628.hosting-data.io');
-define('DB_NAME', $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?: 'dbs9105747');
-define('DB_USER', $_ENV['DB_USER'] ?? getenv('DB_USER') ?: 'dbu2806248');
-define('DB_PASS', $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?: ')*U.lzR428>qcz1wa*gXgkA<?sN[2tK');
+// Content Database credentials (Projekte, Inventar, Events, News)
+define('DB_CONTENT_HOST', $_ENV['DB_CONTENT_HOST'] ?? getenv('DB_CONTENT_HOST') ?: 'db5019375140.hosting-data.io');
+define('DB_CONTENT_NAME', $_ENV['DB_CONTENT_NAME'] ?? getenv('DB_CONTENT_NAME') ?: 'dbs15161271');
+define('DB_CONTENT_USER', $_ENV['DB_CONTENT_USER'] ?? getenv('DB_CONTENT_USER') ?: 'dbu2067984');
+define('DB_CONTENT_PASS', $_ENV['DB_CONTENT_PASS'] ?? getenv('DB_CONTENT_PASS') ?: 'Wort!Zahl?Wort#41254g');
+
+// User Database credentials (Benutzerkonten, Alumni-Profile)
+define('DB_USER_HOST', $_ENV['DB_USER_HOST'] ?? getenv('DB_USER_HOST') ?: 'db5019508945.hosting-data.io');
+define('DB_USER_NAME', $_ENV['DB_USER_NAME'] ?? getenv('DB_USER_NAME') ?: 'dbs15253086');
+define('DB_USER_USER', $_ENV['DB_USER_USER'] ?? getenv('DB_USER_USER') ?: 'dbu4494103');
+define('DB_USER_PASS', $_ENV['DB_USER_PASS'] ?? getenv('DB_USER_PASS') ?: 'Q9!mZ7$A2v#Lr@8x');
+
+// Common database charset
 define('DB_CHARSET', $_ENV['DB_CHARSET'] ?? getenv('DB_CHARSET') ?: 'utf8mb4');
 
+// Legacy database credentials for backward compatibility (uses Content DB)
+define('DB_HOST', DB_CONTENT_HOST);
+define('DB_NAME', DB_CONTENT_NAME);
+define('DB_USER', DB_CONTENT_USER);
+define('DB_PASS', DB_CONTENT_PASS);
+
 // =============================================================================
-// Database Connection Class - Singleton Pattern
+// Database Connection Class - Singleton Pattern with Multi-Database Support
 // =============================================================================
 class Database {
-    private static ?PDO $instance = null;
+    private static ?PDO $contentDbInstance = null;
+    private static ?PDO $userDbInstance = null;
     
     private function __construct() {}
     private function __clone() {}
     
     /**
-     * Get PDO database connection instance
+     * Get PDO database connection instance (legacy method - returns Content DB)
      * @return PDO Database connection
      */
     public static function getConnection(): PDO {
-        if (self::$instance === null) {
-            // Check if PDO extension is available
-            if (!extension_loaded('pdo') || !extension_loaded('pdo_mysql')) {
-                error_log("CRITICAL: PDO or PDO_MySQL extension not installed/enabled on server");
-                http_response_code(503);
-                header('Content-Type: text/html; charset=utf-8');
-                echo '<!DOCTYPE html>
+        return self::getContentConnection();
+    }
+    
+    /**
+     * Get Content Database connection (Inventar, Events, Projekte, News)
+     * @return PDO Content Database connection
+     */
+    public static function getContentConnection(): PDO {
+        if (self::$contentDbInstance === null) {
+            self::$contentDbInstance = self::createConnection(
+                DB_CONTENT_HOST,
+                DB_CONTENT_NAME,
+                DB_CONTENT_USER,
+                DB_CONTENT_PASS,
+                'Content-DB'
+            );
+        }
+        return self::$contentDbInstance;
+    }
+    
+    /**
+     * Get User Database connection (Benutzer, Alumni-Profile)
+     * @return PDO User Database connection
+     */
+    public static function getUserConnection(): PDO {
+        if (self::$userDbInstance === null) {
+            self::$userDbInstance = self::createConnection(
+                DB_USER_HOST,
+                DB_USER_NAME,
+                DB_USER_USER,
+                DB_USER_PASS,
+                'User-DB'
+            );
+        }
+        return self::$userDbInstance;
+    }
+    
+    /**
+     * Create a PDO connection with given credentials
+     * @param string $host Database host
+     * @param string $dbName Database name
+     * @param string $user Database user
+     * @param string $pass Database password
+     * @param string $label Connection label for error logging
+     * @return PDO Database connection
+     */
+    private static function createConnection(string $host, string $dbName, string $user, string $pass, string $label): PDO {
+        // Check if PDO extension is available
+        if (!extension_loaded('pdo') || !extension_loaded('pdo_mysql')) {
+            error_log("CRITICAL: PDO or PDO_MySQL extension not installed/enabled on server ({$label})");
+            http_response_code(503);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -108,26 +169,27 @@ class Database {
     </div>
 </body>
 </html>';
-                exit;
-            }
+            exit;
+        }
+        
+        try {
+            $dsn = "mysql:host=" . $host . ";dbname=" . $dbName . ";charset=" . DB_CHARSET;
+            $options = [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES   => false,
+            ];
             
-            try {
-                $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-                $options = [
-                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES   => false,
-                ];
-                
-                self::$instance = new PDO($dsn, DB_USER, DB_PASS, $options);
-            } catch (PDOException $e) {
-                // Log error securely
-                error_log("Database connection failed: " . $e->getMessage());
-                
-                // Show user-friendly error page
-                http_response_code(503);
-                header('Content-Type: text/html; charset=utf-8');
-                echo '<!DOCTYPE html>
+            $pdo = new PDO($dsn, $user, $pass, $options);
+            return $pdo;
+        } catch (PDOException $e) {
+            // Log error securely
+            error_log("Database connection failed ({$label}): " . $e->getMessage());
+            
+            // Show user-friendly error page
+            http_response_code(503);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -195,11 +257,8 @@ class Database {
     </div>
 </body>
 </html>';
-                exit;
-            }
+            exit;
         }
-        
-        return self::$instance;
     }
 }
 

@@ -4,12 +4,18 @@ declare(strict_types=1);
 /**
  * Global Search API
  * 
- * Centralized search endpoint that searches across multiple database tables using UNION ALL queries.
+ * Centralized search endpoint that searches across multiple database tables.
  * Searches: inventory, users/alumni_profiles, news, events, and projects.
  * Returns results grouped by type (inventory, user, news, event, project).
  * 
+ * Architecture:
+ * - Uses two separate database connections (User-DB and Content-DB)
+ * - User-DB: users, alumni_profiles
+ * - Content-DB: inventory, events, projects, news
+ * - Results are merged in PHP and sorted by date
+ * 
  * Performance optimizations:
- * - Uses UNION ALL instead of UNION for better performance (no duplicate removal overhead)
+ * - Separate queries to each database to handle multi-database architecture
  * - Supports limit/offset pagination (limit: 1-100, default 50; offset: >= 0, default 0)
  * - Database indexes recommended: inventory(name), users(firstname, lastname), news(title)
  */
@@ -25,9 +31,12 @@ require_once BASE_PATH . '/src/SystemLogger.php';
 
 try {
     // Initialize core services
-    $pdo = Database::getConnection();
-    $systemLogger = new SystemLogger($pdo);
-    $auth = new Auth($pdo, $systemLogger);
+    // Note: SystemLogger uses Content DB as it primarily logs content-related actions
+    // Auth uses User DB as it handles user authentication
+    $pdoContent = Database::getContentConnection();
+    $pdoUser = Database::getUserConnection();
+    $systemLogger = new SystemLogger($pdoContent);
+    $auth = new Auth($pdoUser, $systemLogger);
     
     // Check if user is logged in
     if (!$auth->isLoggedIn()) {
@@ -111,8 +120,47 @@ try {
     // Prepare search term for LIKE queries
     $searchTerm = '%' . $query . '%';
     
-    // Build UNION query to search across all tables
-    $sql = "
+    // ===========================================================================
+    // STEP 1: Query User Database (users, alumni_profiles)
+    // ===========================================================================
+    $sqlUserDb = "
+        -- Search Users (with alumni profiles)
+        -- Only published alumni profiles are shown for privacy/GDPR compliance
+        SELECT 
+            'user' as type,
+            u.id,
+            CONCAT(u.firstname, ' ', u.lastname) as title,
+            CONCAT(
+                COALESCE(ap.position, ''),
+                IF(ap.company IS NOT NULL AND ap.position IS NOT NULL, ' @ ', ''),
+                COALESCE(ap.company, '')
+            ) as subtitle,
+            NULL as quantity,
+            ap.bio as extra_info,
+            u.created_at as date
+        FROM users u
+        LEFT JOIN alumni_profiles ap ON u.id = ap.user_id AND ap.is_published = 1
+        WHERE (
+            u.firstname LIKE :search1
+            OR u.lastname LIKE :search2
+            OR ap.company LIKE :search3
+            OR ap.position LIKE :search4
+            OR ap.bio LIKE :search5
+        )
+        ORDER BY u.created_at DESC
+    ";
+    
+    $stmtUser = $pdoUser->prepare($sqlUserDb);
+    for ($i = 1; $i <= 5; $i++) {
+        $stmtUser->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
+    }
+    $stmtUser->execute();
+    $userResults = $stmtUser->fetchAll(PDO::FETCH_ASSOC);
+    
+    // ===========================================================================
+    // STEP 2: Query Content Database (inventory, events, projects, news)
+    // ===========================================================================
+    $sqlContentDb = "
         -- Search Inventory
         SELECT 
             'inventory' as type,
@@ -140,32 +188,6 @@ try {
         
         UNION ALL
         
-        -- Search Users (with alumni profiles)
-        -- Only published alumni profiles are shown for privacy/GDPR compliance
-        SELECT 
-            'user' as type,
-            u.id,
-            CONCAT(u.firstname, ' ', u.lastname) as title,
-            CONCAT(
-                COALESCE(ap.position, ''),
-                IF(ap.company IS NOT NULL AND ap.position IS NOT NULL, ' @ ', ''),
-                COALESCE(ap.company, '')
-            ) as subtitle,
-            NULL as quantity,
-            ap.bio as extra_info,
-            u.created_at as date
-        FROM users u
-        LEFT JOIN alumni_profiles ap ON u.id = ap.user_id AND ap.is_published = 1
-        WHERE (
-            u.firstname LIKE :search6
-            OR u.lastname LIKE :search7
-            OR ap.company LIKE :search8
-            OR ap.position LIKE :search9
-            OR ap.bio LIKE :search10
-        )
-        
-        UNION ALL
-        
         -- Search News
         SELECT 
             'news' as type,
@@ -176,8 +198,8 @@ try {
             content as extra_info,
             created_at as date
         FROM news
-        WHERE title LIKE :search11
-        OR content LIKE :search12
+        WHERE title LIKE :search6
+        OR content LIKE :search7
         
         UNION ALL
         
@@ -191,9 +213,9 @@ try {
             description as extra_info,
             event_date as date
         FROM events
-        WHERE title LIKE :search13
-        OR description LIKE :search14
-        OR location LIKE :search15
+        WHERE title LIKE :search8
+        OR description LIKE :search9
+        OR location LIKE :search10
         
         UNION ALL
         
@@ -207,29 +229,33 @@ try {
             description as extra_info,
             created_at as date
         FROM projects
-        WHERE title LIKE :search16
-        OR description LIKE :search17
-        OR client LIKE :search18
+        WHERE title LIKE :search11
+        OR description LIKE :search12
+        OR client LIKE :search13
         
         ORDER BY date DESC
-        LIMIT :limit OFFSET :offset
     ";
     
-    // Prepare statement
-    $stmt = $pdo->prepare($sql);
-    
-    // Bind all search parameters (18 total)
-    for ($i = 1; $i <= 18; $i++) {
-        $stmt->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
+    $stmtContent = $pdoContent->prepare($sqlContentDb);
+    for ($i = 1; $i <= 13; $i++) {
+        $stmtContent->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
     }
+    $stmtContent->execute();
+    $contentResults = $stmtContent->fetchAll(PDO::FETCH_ASSOC);
     
-    // Bind pagination parameters
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    // ===========================================================================
+    // STEP 3: Merge results from both databases
+    // ===========================================================================
+    $allResults = array_merge($userResults, $contentResults);
     
-    // Execute query
-    $stmt->execute();
-    $allResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Sort all results by date DESC
+    usort($allResults, function($a, $b) {
+        return strtotime($b['date']) - strtotime($a['date']);
+    });
+    
+    // Apply pagination after merging and sorting
+    $totalBeforePagination = count($allResults);
+    $allResults = array_slice($allResults, $offset, $limit);
     
     // Group results by type
     $groupedResults = [
