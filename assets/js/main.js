@@ -1764,6 +1764,84 @@ function showSkeletonLoaders(container, count = 8) {
 }
 
 /**
+ * Create skeleton loaders for alumni profiles using Bootstrap placeholder classes
+ * @param {number} count - Number of skeleton items to show (default: 6)
+ * @returns {string} HTML string containing skeleton cards
+ */
+function createAlumniSkeleton(count = 6) {
+    const skeletonCards = [];
+    
+    for (let i = 0; i < count; i++) {
+        skeletonCards.push(`
+            <div class="col" aria-hidden="true">
+                <div class="card glass-card h-100">
+                    <div class="card-body p-4">
+                        <!-- Profile Header with Avatar -->
+                        <div class="d-flex align-items-start mb-3">
+                            <!-- Avatar Placeholder -->
+                            <div class="flex-shrink-0 me-3">
+                                <div class="placeholder-glow">
+                                    <div class="placeholder bg-secondary" style="width: 80px; height: 80px; border-radius: 50%;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Profile Info Placeholder -->
+                            <div class="flex-grow-1">
+                                <div class="placeholder-glow mb-2">
+                                    <span class="placeholder col-8 bg-secondary"></span>
+                                </div>
+                                <div class="placeholder-glow">
+                                    <span class="placeholder col-6 bg-secondary"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Position and Company Placeholder -->
+                        <div class="mb-3">
+                            <div class="placeholder-glow mb-2">
+                                <span class="placeholder col-10 bg-secondary"></span>
+                            </div>
+                            <div class="placeholder-glow">
+                                <span class="placeholder col-8 bg-secondary"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Bio Placeholder -->
+                        <div class="mb-3">
+                            <div class="placeholder-glow">
+                                <span class="placeholder col-12 bg-secondary"></span>
+                                <span class="placeholder col-12 bg-secondary"></span>
+                                <span class="placeholder col-9 bg-secondary"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Badges Placeholder -->
+                        <div class="mb-3">
+                            <div class="placeholder-glow">
+                                <span class="placeholder col-4 bg-secondary" style="height: 24px; display: inline-block; border-radius: 12px; margin-right: 8px;"></span>
+                                <span class="placeholder col-4 bg-secondary" style="height: 24px; display: inline-block; border-radius: 12px;"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Contact Buttons Placeholder -->
+                        <div class="d-flex gap-2 pt-2 border-top">
+                            <div class="placeholder-glow flex-fill">
+                                <span class="placeholder col-12 bg-secondary" style="height: 32px; display: block; border-radius: 6px;"></span>
+                            </div>
+                            <div class="placeholder-glow flex-fill">
+                                <span class="placeholder col-12 bg-secondary" style="height: 32px; display: block; border-radius: 6px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+    }
+    
+    return skeletonCards.join('');
+}
+
+/**
  * Render inventory items in the grid using DocumentFragment to minimize reflows
  * DocumentFragment reduces DOM manipulation overhead by batching all DOM insertions
  * into a single operation, preventing multiple layout recalculations
@@ -2690,6 +2768,9 @@ function initAlumniDatabaseSearch() {
     // Fallback value matches ALUMNI_BIO_PREVIEW_LENGTH_DB in alumni_database.php
     const ALUMNI_BIO_PREVIEW_LENGTH = window.ALUMNI_BIO_PREVIEW_LENGTH || 120;
     
+    // Number of skeleton placeholders to show during loading
+    const ALUMNI_SKELETON_COUNT = 6;
+    
     let searchTimeout = null;
     
     /**
@@ -2703,6 +2784,11 @@ function initAlumniDatabaseSearch() {
         // Show spinner
         if (searchSpinner) {
             searchSpinner.style.display = 'flex';
+        }
+        
+        // Show skeleton loaders instead of empty grid
+        if (gridContainer) {
+            gridContainer.innerHTML = createAlumniSkeleton(ALUMNI_SKELETON_COUNT);
         }
         
         // Prepare form data

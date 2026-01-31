@@ -52,6 +52,10 @@ login_debug.txt
 # Vendor dependencies (composer packages)
 vendor/
 
+# NPM dependencies
+node_modules/
+package-lock.json
+
 # Temporary test files (keep check_requirements.php for users)
 test_error_handling.php
 
