@@ -158,6 +158,153 @@ class News {
     }
     
     /**
+     * Sanitize HTML content using a whitelist approach
+     * Allows only safe HTML tags and attributes commonly used in rich text editors
+     * 
+     * @param string $html Raw HTML content from Quill editor
+     * @return string Sanitized HTML content safe for storage and display
+     */
+    private function sanitizeHtml(string $html): string {
+        // Define allowed tags and their attributes
+        $allowedTags = [
+            'p' => [],
+            'br' => [],
+            'strong' => [],
+            'b' => [],
+            'em' => [],
+            'i' => [],
+            'u' => [],
+            's' => [],
+            'strike' => [],
+            'h1' => [],
+            'h2' => [],
+            'h3' => [],
+            'ul' => [],
+            'ol' => [],
+            'li' => [],
+            'a' => ['href', 'target', 'rel'],
+            'span' => ['style'],
+            'div' => []
+        ];
+        
+        // Use DOMDocument for safe HTML parsing and manipulation
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        
+        // Suppress warnings for malformed HTML
+        $previousValue = libxml_use_internal_errors(true);
+        
+        // Load HTML with UTF-8 encoding
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        
+        // Clear errors
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousValue);
+        
+        // Remove disallowed tags and attributes
+        $this->sanitizeDomNode($dom->documentElement, $allowedTags);
+        
+        // Export clean HTML
+        $sanitized = $dom->saveHTML($dom->documentElement);
+        
+        // Remove the XML encoding declaration if present
+        $sanitized = preg_replace('/^<\?xml[^>]+>\s*/', '', $sanitized);
+        
+        return $sanitized;
+    }
+    
+    /**
+     * Recursively sanitize DOM nodes
+     * 
+     * @param \DOMNode $node Current node to sanitize
+     * @param array $allowedTags Allowed tags and their attributes
+     */
+    private function sanitizeDomNode(\DOMNode $node, array $allowedTags): void {
+        $nodesToRemove = [];
+        
+        // Iterate through child nodes
+        if ($node->hasChildNodes()) {
+            foreach ($node->childNodes as $child) {
+                if ($child->nodeType === XML_ELEMENT_NODE) {
+                    $tagName = strtolower($child->nodeName);
+                    
+                    // Check if tag is allowed
+                    if (!isset($allowedTags[$tagName])) {
+                        $nodesToRemove[] = $child;
+                        continue;
+                    }
+                    
+                    // Remove disallowed attributes
+                    if ($child->hasAttributes()) {
+                        $attributesToRemove = [];
+                        foreach ($child->attributes as $attr) {
+                            $attrName = strtolower($attr->nodeName);
+                            
+                            // Special handling for style attribute - only allow safe color properties
+                            if ($attrName === 'style' && in_array('style', $allowedTags[$tagName], true)) {
+                                $safeStyle = $this->sanitizeStyleAttribute($attr->nodeValue);
+                                if (!empty($safeStyle)) {
+                                    $child->setAttribute('style', $safeStyle);
+                                } else {
+                                    $attributesToRemove[] = $attrName;
+                                }
+                            } elseif (!in_array($attrName, $allowedTags[$tagName], true)) {
+                                $attributesToRemove[] = $attrName;
+                            }
+                        }
+                        
+                        foreach ($attributesToRemove as $attrName) {
+                            $child->removeAttribute($attrName);
+                        }
+                    }
+                    
+                    // Recursively sanitize children
+                    $this->sanitizeDomNode($child, $allowedTags);
+                }
+            }
+        }
+        
+        // Remove disallowed nodes
+        foreach ($nodesToRemove as $nodeToRemove) {
+            // Keep the text content of the removed node
+            while ($nodeToRemove->hasChildNodes()) {
+                $node->insertBefore($nodeToRemove->firstChild, $nodeToRemove);
+            }
+            $node->removeChild($nodeToRemove);
+        }
+    }
+    
+    /**
+     * Sanitize CSS style attribute to allow only safe properties
+     * 
+     * @param string $style Raw style attribute value
+     * @return string Sanitized style value
+     */
+    private function sanitizeStyleAttribute(string $style): string {
+        // Only allow color and background-color properties (used by Quill)
+        $allowedProperties = ['color', 'background-color'];
+        $safeStyles = [];
+        
+        // Parse style declarations
+        $declarations = explode(';', $style);
+        foreach ($declarations as $declaration) {
+            $parts = explode(':', $declaration, 2);
+            if (count($parts) === 2) {
+                $property = trim(strtolower($parts[0]));
+                $value = trim($parts[1]);
+                
+                if (in_array($property, $allowedProperties, true)) {
+                    // Validate color value (hex, rgb, rgba, named colors)
+                    if (preg_match('/^(#[0-9a-f]{3,6}|rgb\([^)]+\)|rgba\([^)]+\)|[a-z]+)$/i', $value)) {
+                        $safeStyles[] = $property . ': ' . $value;
+                    }
+                }
+            }
+        }
+        
+        return implode('; ', $safeStyles);
+    }
+    
+    /**
      * Save (create or update) a news article
      * Only users with 'vorstand' or 'ressort' role can save news
      * 
@@ -172,6 +319,9 @@ class News {
             $this->log("Error saving news: Title and content are required");
             return false;
         }
+        
+        // Sanitize HTML content to prevent XSS attacks
+        $data['content'] = $this->sanitizeHtml($data['content']);
         
         // Check permissions - only 'vorstand' or 'ressort' can save news
         $userRole = $data['user_role'] ?? null;
