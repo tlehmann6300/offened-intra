@@ -123,6 +123,17 @@
     $jsVersion = file_exists(BASE_PATH . '/assets/js/app.min.js')
         ? '?v=' . filemtime(BASE_PATH . '/assets/js/app.min.js')
         : '?v=' . time();
+    
+    // Modular JavaScript Structure:
+    // The bundled app.min.js includes the following modules (in order):
+    // 1. core.js - Global functions (CSRF, toasts, UI initialization)
+    // 2. inventory.js - Inventory management (filters, skeletons, CRUD)
+    // 3. events.js - Event management (RSVP, helpers, countdown)
+    // 4. alumni.js - Alumni database (search, profiles)
+    // 5. Other utility modules (navbar, navigation, news, etc.)
+    //
+    // Each module auto-initializes only when its DOM elements are present on the page,
+    // ensuring conditional execution without requiring separate script tags.
     ?>
     <script src="<?= SITE_URL ?>/assets/js/app.min.js<?= $jsVersion ?>"></script>
     
