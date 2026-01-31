@@ -13,8 +13,8 @@ require_once BASE_PATH . '/src/HelperService.php';
 require_once BASE_PATH . '/src/MailService.php';
 
 // Get database connections
-$pdoContent = Database::getContentConnection();
-$pdoUser = Database::getUserConnection();
+$pdoContent = DatabaseManager::getContentConnection();
+$pdoUser = DatabaseManager::getUserConnection();
 
 $newsService = new NewsService($pdo);
 $event = new Event($pdo, $newsService);

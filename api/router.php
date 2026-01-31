@@ -27,7 +27,7 @@ try {
     require_once BASE_PATH . '/src/SystemLogger.php';
 
     // Initialize core services
-    $pdo = Database::getConnection();
+    $pdo = DatabaseManager::getConnection();
     $systemLogger = new SystemLogger($pdo);
     $auth = new Auth($pdo, $systemLogger);
 } catch (Throwable $e) {

@@ -13,7 +13,7 @@ require_once BASE_PATH . '/src/NotificationService.php';
 header('Content-Type: application/json');
 
 // Initialize database and auth
-$pdo = Database::getConnection();
+$pdo = DatabaseManager::getConnection();
 $systemLogger = new SystemLogger($pdo);
 $auth = new Auth($pdo, $systemLogger);
 

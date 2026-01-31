@@ -21,9 +21,9 @@ define('DB_PASS', $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?: ')*U.lzR428>qcz1wa*gX
 define('DB_CHARSET', $_ENV['DB_CHARSET'] ?? getenv('DB_CHARSET') ?: 'utf8mb4');
 
 // =============================================================================
-// Database Connection Class - Singleton Pattern
+// DatabaseManager Class - Singleton Pattern
 // =============================================================================
-class Database {
+class DatabaseManager {
     private static ?PDO $instance = null;
     
     private function __construct() {}
@@ -217,4 +217,4 @@ class Database {
 }
 
 // Create global $pdo variable for backward compatibility
-$pdo = Database::getConnection();
+$pdo = DatabaseManager::getConnection();

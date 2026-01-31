@@ -33,8 +33,8 @@ try {
     // Initialize core services
     // Note: SystemLogger uses Content DB as it primarily logs content-related actions
     // Auth uses User DB as it handles user authentication
-    $pdoContent = Database::getContentConnection();
-    $pdoUser = Database::getUserConnection();
+    $pdoContent = DatabaseManager::getContentConnection();
+    $pdoUser = DatabaseManager::getUserConnection();
     $systemLogger = new SystemLogger($pdoContent);
     $auth = new Auth($pdoUser, $systemLogger);
     

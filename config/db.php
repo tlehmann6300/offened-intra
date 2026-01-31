@@ -35,9 +35,9 @@ define('DB_USER', DB_CONTENT_USER);
 define('DB_PASS', DB_CONTENT_PASS);
 
 // =============================================================================
-// Database Connection Class - Singleton Pattern with Multi-Database Support
+// DatabaseManager Class - Singleton Pattern with Multi-Database Support
 // =============================================================================
-class Database {
+class DatabaseManager {
     private static ?PDO $contentDbInstance = null;
     private static ?PDO $userDbInstance = null;
     
@@ -263,4 +263,4 @@ class Database {
 }
 
 // Create global $pdo variable for backward compatibility
-$pdo = Database::getConnection();
+$pdo = DatabaseManager::getConnection();
