@@ -39,36 +39,54 @@ if (file_exists(BASE_PATH . '/.env')) {
 }
 
 // Load minimal configuration for CLI (avoid session initialization in config.php)
-// Define database constants before loading db.php
-if (!defined('DB_CONTENT_HOST')) {
-    define('DB_CONTENT_HOST', $_ENV['DB_CONTENT_HOST'] ?? getenv('DB_CONTENT_HOST') ?: 'db5019375140.hosting-data.io');
-}
-if (!defined('DB_CONTENT_NAME')) {
-    define('DB_CONTENT_NAME', $_ENV['DB_CONTENT_NAME'] ?? getenv('DB_CONTENT_NAME') ?: 'dbs15161271');
-}
-if (!defined('DB_CONTENT_USER')) {
-    define('DB_CONTENT_USER', $_ENV['DB_CONTENT_USER'] ?? getenv('DB_CONTENT_USER') ?: 'dbu2067984');
-}
-if (!defined('DB_CONTENT_PASS')) {
-    define('DB_CONTENT_PASS', $_ENV['DB_CONTENT_PASS'] ?? getenv('DB_CONTENT_PASS') ?: 'Wort!Zahl?Wort#41254g');
-}
+// Define database constants - require from environment
 if (!defined('DB_USER_HOST')) {
-    define('DB_USER_HOST', $_ENV['DB_USER_HOST'] ?? getenv('DB_USER_HOST') ?: 'db5019508945.hosting-data.io');
+    $dbHost = $_ENV['DB_USER_HOST'] ?? getenv('DB_USER_HOST');
+    if (!$dbHost) {
+        die("ERROR: DB_USER_HOST not configured. Set in .env file or environment.\n");
+    }
+    define('DB_USER_HOST', $dbHost);
 }
 if (!defined('DB_USER_NAME')) {
-    define('DB_USER_NAME', $_ENV['DB_USER_NAME'] ?? getenv('DB_USER_NAME') ?: 'dbs15253086');
+    $dbName = $_ENV['DB_USER_NAME'] ?? getenv('DB_USER_NAME');
+    if (!$dbName) {
+        die("ERROR: DB_USER_NAME not configured. Set in .env file or environment.\n");
+    }
+    define('DB_USER_NAME', $dbName);
 }
 if (!defined('DB_USER_USER')) {
-    define('DB_USER_USER', $_ENV['DB_USER_USER'] ?? getenv('DB_USER_USER') ?: 'dbu4494103');
+    $dbUser = $_ENV['DB_USER_USER'] ?? getenv('DB_USER_USER');
+    if (!$dbUser) {
+        die("ERROR: DB_USER_USER not configured. Set in .env file or environment.\n");
+    }
+    define('DB_USER_USER', $dbUser);
 }
 if (!defined('DB_USER_PASS')) {
-    define('DB_USER_PASS', $_ENV['DB_USER_PASS'] ?? getenv('DB_USER_PASS') ?: 'Q9!mZ7$A2v#Lr@8x');
+    $dbPass = $_ENV['DB_USER_PASS'] ?? getenv('DB_USER_PASS');
+    if (!$dbPass) {
+        die("ERROR: DB_USER_PASS not configured. Set in .env file or environment.\n");
+    }
+    define('DB_USER_PASS', $dbPass);
 }
 if (!defined('DB_CHARSET')) {
     define('DB_CHARSET', $_ENV['DB_CHARSET'] ?? getenv('DB_CHARSET') ?: 'utf8mb4');
 }
 
-// SMTP Configuration
+// Not needed but define for compatibility
+if (!defined('DB_CONTENT_HOST')) {
+    define('DB_CONTENT_HOST', $_ENV['DB_CONTENT_HOST'] ?? getenv('DB_CONTENT_HOST') ?: 'localhost');
+}
+if (!defined('DB_CONTENT_NAME')) {
+    define('DB_CONTENT_NAME', $_ENV['DB_CONTENT_NAME'] ?? getenv('DB_CONTENT_NAME') ?: 'content_db');
+}
+if (!defined('DB_CONTENT_USER')) {
+    define('DB_CONTENT_USER', $_ENV['DB_CONTENT_USER'] ?? getenv('DB_CONTENT_USER') ?: 'user');
+}
+if (!defined('DB_CONTENT_PASS')) {
+    define('DB_CONTENT_PASS', $_ENV['DB_CONTENT_PASS'] ?? getenv('DB_CONTENT_PASS') ?: '');
+}
+
+// SMTP Configuration - require from environment
 if (!defined('SMTP_HOST')) {
     define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.ionos.de');
 }
@@ -79,10 +97,18 @@ if (!defined('SMTP_SECURE')) {
     define('SMTP_SECURE', $_ENV['SMTP_SECURE'] ?? getenv('SMTP_SECURE') ?: 'tls');
 }
 if (!defined('SMTP_USER')) {
-    define('SMTP_USER', $_ENV['SMTP_USER'] ?? getenv('SMTP_USER') ?: 'mail@test.business-consulting.de');
+    $smtpUser = $_ENV['SMTP_USER'] ?? getenv('SMTP_USER');
+    if (!$smtpUser) {
+        die("ERROR: SMTP_USER not configured. Set in .env file or environment.\n");
+    }
+    define('SMTP_USER', $smtpUser);
 }
 if (!defined('SMTP_PASS')) {
-    define('SMTP_PASS', $_ENV['SMTP_PASS'] ?? getenv('SMTP_PASS') ?: 'Test12345678.');
+    $smtpPass = $_ENV['SMTP_PASS'] ?? getenv('SMTP_PASS');
+    if (!$smtpPass) {
+        die("ERROR: SMTP_PASS not configured. Set in .env file or environment.\n");
+    }
+    define('SMTP_PASS', $smtpPass);
 }
 if (!defined('SMTP_FROM_EMAIL')) {
     define('SMTP_FROM_EMAIL', $_ENV['SMTP_FROM_EMAIL'] ?? getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
