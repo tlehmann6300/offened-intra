@@ -363,7 +363,83 @@ if (!$isPublic) {
 }
 
 // -------------------------------------------------------------------
-// 5. TEMPLATE LOADING
+// 5. MODULE-SPECIFIC PERMISSION CHECKS
+// -------------------------------------------------------------------
+
+// Define module access requirements
+// Each module specifies the minimum role required to access it
+$modulePermissions = [
+    'events' => 'mitglied',           // Events module - accessible to all members and above
+    'events_modern' => 'mitglied',
+    'event_management' => 'ressortleiter',  // Event management - requires department leader or above
+    'alumni' => 'mitglied',           // Alumni module - accessible to all members and above
+    'alumni_modern' => 'mitglied',
+    'alumni_database' => 'mitglied',
+    'inventory' => 'mitglied',        // Inventory module - accessible to all members and above
+    'inventory_config' => 'ressortleiter', // Inventory configuration - requires department leader or above
+    'admin_dashboard' => 'admin',     // Admin dashboard - requires admin role
+    'settings' => 'mitglied',         // Settings - accessible to all members
+    'newsroom' => 'mitglied',         // Newsroom - accessible to all members
+    'news_editor' => 'ressortleiter', // News editor - requires department leader or above
+    'projects' => 'mitglied',         // Projects - accessible to all members
+    'project_management' => 'ressortleiter', // Project management - requires department leader or above
+];
+
+// Check module-specific permissions for logged-in users
+if ($auth->isLoggedIn() && isset($modulePermissions[$page])) {
+    $requiredRole = $modulePermissions[$page];
+    try {
+        // Use Auth's checkPermission method to verify role hierarchy
+        if (!$auth->checkPermission($requiredRole)) {
+            // User doesn't have sufficient permissions
+            $userRole = $auth->getUserRole();
+            error_log("Access denied: User with role '{$userRole}' attempted to access '{$page}' which requires '{$requiredRole}'");
+            
+            http_response_code(403);
+            die('<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zugriff verweigert - IBC-Intra</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+               display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .error-container { background: white; border-radius: 10px; padding: 40px; max-width: 600px; 
+                          box-shadow: 0 10px 40px rgba(0,0,0,0.2); text-align: center; }
+        .logo { font-size: 48px; font-weight: bold; color: #667eea; margin-bottom: 20px; }
+        h1 { color: #333; margin-bottom: 20px; font-size: 28px; }
+        p { color: #666; line-height: 1.6; margin-bottom: 15px; }
+        .icon { font-size: 64px; margin-bottom: 20px; }
+        a { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #667eea; 
+            color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        a:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="logo">IBC</div>
+        <div class="icon">🔒</div>
+        <h1>403 - Zugriff verweigert</h1>
+        <p>Sie haben keine Berechtigung, auf diese Seite zuzugreifen.</p>
+        <p>Diese Seite erfordert die Rolle: <strong>' . htmlspecialchars($requiredRole) . '</strong></p>
+        <p>Ihre aktuelle Rolle: <strong>' . htmlspecialchars($userRole) . '</strong></p>
+        <a href="index.php">Zurück zur Startseite</a>
+    </div>
+</body>
+</html>');
+        }
+    } catch (RuntimeException $e) {
+        // User not logged in (shouldn't happen as we check isLoggedIn above, but handle it anyway)
+        error_log("Permission check error: " . $e->getMessage());
+        header('Location: index.php?page=login');
+        exit;
+    }
+}
+
+// -------------------------------------------------------------------
+// 6. TEMPLATE LOADING
 // -------------------------------------------------------------------
 
 $templateDir = BASE_DIR . '/templates';
@@ -421,7 +497,7 @@ if (!file_exists($templateFile)) {
 }
 
 // -------------------------------------------------------------------
-// 6. RENDER OUTPUT
+// 7. RENDER OUTPUT
 // -------------------------------------------------------------------
 
 try {
