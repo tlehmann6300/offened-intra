@@ -863,7 +863,16 @@ class Auth {
             $email = trim($email);
             $firstname = trim($firstname);
             $lastname = trim($lastname);
-            $password = trim($password);
+            // Note: Don't trim password - users may intentionally include spaces
+            
+            // Validate required fields first (before other validations)
+            if (empty($email) || empty($firstname) || empty($lastname) || empty($password)) {
+                $this->log("Alumni account creation failed: Missing required fields");
+                return [
+                    'success' => false,
+                    'message' => 'Alle Felder sind erforderlich (E-Mail, Vorname, Nachname, Passwort).'
+                ];
+            }
             
             // Validate email format
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -871,15 +880,6 @@ class Auth {
                 return [
                     'success' => false,
                     'message' => 'Ungültige E-Mail-Adresse.'
-                ];
-            }
-            
-            // Validate required fields
-            if (empty($email) || empty($firstname) || empty($lastname) || empty($password)) {
-                $this->log("Alumni account creation failed: Missing required fields");
-                return [
-                    'success' => false,
-                    'message' => 'Alle Felder sind erforderlich (E-Mail, Vorname, Nachname, Passwort).'
                 ];
             }
             
