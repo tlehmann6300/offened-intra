@@ -172,11 +172,11 @@ grep birthday_check /var/log/syslog
 
 The birthday notification system respects user privacy:
 
-1. **Opt-in Model:** Users can enable/disable birthday notifications in their settings
+1. **Opt-out Model:** Birthday notifications are enabled by default, but users can disable them in their settings
 2. **Database Field:** `notify_birthday` (TINYINT) controls visibility
-   - `1` (TRUE): Birthday visible, emails sent
+   - `1` (TRUE, DEFAULT): Birthday visible, emails sent
    - `0` (FALSE): Birthday hidden, no emails sent
-3. **Admin Summary:** Only shows users who opted in
+3. **Admin Summary:** Only shows users who have notifications enabled
 4. **Data Minimization:** Only necessary data is processed
 
 Users can change their privacy settings at:
