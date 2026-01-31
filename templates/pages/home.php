@@ -16,10 +16,34 @@ $news = new News($pdo, $newsService, $systemLogger);
 $event = new Event($pdo, $newsService);
 $project = new Project($pdo);
 
-// Fetch data for dashboard
+// Initialize Inventory and Alumni for dashboard teasers
+require_once BASE_DIR . '/src/Inventory.php';
+require_once BASE_DIR . '/src/Alumni.php';
+$inventory = new Inventory($pdo, $systemLogger);
+$alumni = new Alumni($pdo, $systemLogger);
+
+// Fetch data for dashboard teasers - only summary data, not full lists
 $latestNews = $news->getLatest(3);
 $nextEvent = $event->getNextEvent();
 $latestProjects = $project->getLatest(3);
+
+// Get inventory statistics for teaser
+$inventoryStats = [
+    'total_items' => 0,
+    'low_stock' => 0
+];
+try {
+    $allInventoryItems = $inventory->getAll();
+    $inventoryStats['total_items'] = count($allInventoryItems);
+    $inventoryStats['low_stock'] = count(array_filter($allInventoryItems, function($item) {
+        return isset($item['quantity']) && $item['quantity'] < 5;
+    }));
+} catch (Exception $e) {
+    error_log("Error fetching inventory stats: " . $e->getMessage());
+}
+
+// Get alumni statistics for teaser
+$alumniStats = $alumni->getStatistics();
 
 // Get user's first name
 $firstname = $auth->getFirstname() ?? 'Benutzer';
@@ -207,6 +231,73 @@ $firstname = $auth->getFirstname() ?? 'Benutzer';
                             <i class="fas fa-info-circle me-2"></i>Keine Projekte
                         </div>
                     <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row: Inventory and Alumni Teasers -->
+    <div class="row g-3 g-md-4 mt-2">
+        <!-- Inventory Teaser -->
+        <div class="col-12 col-md-6">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 mb-0"><i class="fas fa-boxes me-2 text-warning"></i>Inventar</h2>
+                <a href="index.php?page=inventory" class="btn btn-sm btn-outline-warning">Zur Verwaltung</a>
+            </div>
+            
+            <div class="card glass-card bento-card h-100">
+                <div class="card-body p-4">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <i class="fas fa-box fa-2x text-warning mb-2"></i>
+                                <h3 class="mb-0"><?php echo $inventoryStats['total_items']; ?></h3>
+                                <p class="text-muted mb-0 small">Gegenstände</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
+                                <h3 class="mb-0"><?php echo $inventoryStats['low_stock']; ?></h3>
+                                <p class="text-muted mb-0 small">Niedriger Bestand</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Verwalten Sie Ihr Inventar und behalten Sie den Überblick</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alumni Teaser -->
+        <div class="col-12 col-md-6">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 mb-0"><i class="fas fa-user-graduate me-2 text-purple"></i>Alumni</h2>
+                <a href="index.php?page=alumni" class="btn btn-sm btn-outline-primary">Zum Netzwerk</a>
+            </div>
+            
+            <div class="card glass-card bento-card h-100">
+                <div class="card-body p-4">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                <h3 class="mb-0"><?php echo $alumniStats['total_alumni'] ?? 0; ?></h3>
+                                <p class="text-muted mb-0 small">Alumni-Mitglieder</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <i class="fas fa-briefcase fa-2x text-success mb-2"></i>
+                                <h3 class="mb-0"><?php echo count($alumniStats['by_industry'] ?? []); ?></h3>
+                                <p class="text-muted mb-0 small">Branchen</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Vernetzen Sie sich mit ehemaligen Mitgliedern</small>
+                    </div>
                 </div>
             </div>
         </div>
