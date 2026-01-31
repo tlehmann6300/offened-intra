@@ -15,6 +15,7 @@ require_once BASE_PATH . '/src/MailService.php';
 // Get database connections
 $pdoContent = DatabaseManager::getContentConnection();
 $pdoUser = DatabaseManager::getUserConnection();
+$pdo = $pdoContent; // Legacy compatibility - most services use Content DB
 
 $newsService = new NewsService($pdo);
 $event = new Event($pdo, $newsService);
