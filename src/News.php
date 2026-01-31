@@ -303,9 +303,40 @@ class News {
      * @return string Sanitized style value
      */
     private function sanitizeStyleAttribute(string $style): string {
-        // Only allow color and background-color properties (used by Quill)
-        $allowedProperties = ['color', 'background-color'];
+        // Allow safe properties commonly used by Quill
+        $allowedProperties = ['color', 'background-color', 'text-align', 'font-size', 'font-family', 'line-height'];
         $safeStyles = [];
+        
+        // Define valid color names (CSS3 standard colors)
+        $validColorNames = [
+            'black', 'silver', 'gray', 'white', 'maroon', 'red', 'purple', 'fuchsia',
+            'green', 'lime', 'olive', 'yellow', 'navy', 'blue', 'teal', 'aqua',
+            'orange', 'aliceblue', 'antiquewhite', 'aquamarine', 'azure', 'beige',
+            'bisque', 'blanchedalmond', 'blueviolet', 'brown', 'burlywood', 'cadetblue',
+            'chartreuse', 'chocolate', 'coral', 'cornflowerblue', 'cornsilk', 'crimson',
+            'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod', 'darkgray', 'darkgreen',
+            'darkgrey', 'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange',
+            'darkorchid', 'darkred', 'darksalmon', 'darkseagreen', 'darkslateblue',
+            'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink',
+            'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite',
+            'forestgreen', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'greenyellow',
+            'grey', 'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki',
+            'lavender', 'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue',
+            'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray', 'lightgreen',
+            'lightgrey', 'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue',
+            'lightslategray', 'lightslategrey', 'lightsteelblue', 'lightyellow',
+            'limegreen', 'linen', 'magenta', 'mediumaquamarine', 'mediumblue',
+            'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue',
+            'mediumspringgreen', 'mediumturquoise', 'mediumvioletred', 'midnightblue',
+            'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'oldlace', 'olivedrab',
+            'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise',
+            'palevioletred', 'papayawhip', 'peachpuff', 'peru', 'pink', 'plum',
+            'powderblue', 'rebeccapurple', 'rosybrown', 'royalblue', 'saddlebrown',
+            'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna', 'skyblue',
+            'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue',
+            'tan', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'whitesmoke',
+            'yellowgreen', 'transparent'
+        ];
         
         // Parse style declarations
         $declarations = explode(';', $style);
@@ -316,9 +347,71 @@ class News {
                 $value = trim($parts[1]);
                 
                 if (in_array($property, $allowedProperties, true)) {
-                    // Validate color value (hex, rgb, rgba, named colors)
-                    if (preg_match('/^(#[0-9a-f]{3,6}|rgb\([^)]+\)|rgba\([^)]+\)|[a-z]+)$/i', $value)) {
-                        $safeStyles[] = $property . ': ' . $value;
+                    // Validate color values (for color and background-color)
+                    if (in_array($property, ['color', 'background-color'], true)) {
+                        // Check hex color (#RGB or #RRGGBB)
+                        if (preg_match('/^#[0-9a-f]{3}([0-9a-f]{3})?$/i', $value)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                        // Check rgb(r, g, b) - validate numeric ranges
+                        elseif (preg_match('/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i', $value, $matches)) {
+                            $r = (int)$matches[1];
+                            $g = (int)$matches[2];
+                            $b = (int)$matches[3];
+                            if ($r <= 255 && $g <= 255 && $b <= 255) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
+                        // Check rgba(r, g, b, a) - validate numeric ranges
+                        elseif (preg_match('/^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([0-9.]+)\s*\)$/i', $value, $matches)) {
+                            $r = (int)$matches[1];
+                            $g = (int)$matches[2];
+                            $b = (int)$matches[3];
+                            $a = (float)$matches[4];
+                            if ($r <= 255 && $g <= 255 && $b <= 255 && $a >= 0 && $a <= 1) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
+                        // Check named colors
+                        elseif (in_array(strtolower($value), $validColorNames, true)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                    }
+                    // Validate text-align values
+                    elseif ($property === 'text-align') {
+                        if (in_array($value, ['left', 'right', 'center', 'justify'], true)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                    }
+                    // Validate font-size (allow px, em, rem, %, pt units with reasonable limits)
+                    elseif ($property === 'font-size') {
+                        if (preg_match('/^(\d+(?:\.\d+)?)(px|em|rem|%|pt)$/i', $value, $matches)) {
+                            $size = (float)$matches[1];
+                            $unit = strtolower($matches[2]);
+                            // Set reasonable limits to prevent layout abuse
+                            $maxSizes = ['px' => 200, 'em' => 10, 'rem' => 10, '%' => 500, 'pt' => 200];
+                            if ($size > 0 && $size <= $maxSizes[$unit]) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
+                    }
+                    // Validate font-family (allow common safe fonts)
+                    elseif ($property === 'font-family') {
+                        // Only allow alphanumeric, spaces, commas, quotes, and hyphens
+                        if (preg_match('/^[a-z0-9\s,\'\"\-]+$/i', $value)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                    }
+                    // Validate line-height (unitless or with units)
+                    elseif ($property === 'line-height') {
+                        if (preg_match('/^(\d+(?:\.\d+)?)(px|em|rem|%)?$/i', $value, $matches)) {
+                            $size = (float)$matches[1];
+                            $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+                            // Reasonable limits
+                            if ($size > 0 && $size <= 10) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
                     }
                 }
             }
