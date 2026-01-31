@@ -1180,7 +1180,16 @@ class Inventory {
     
     /**
      * Adjust inventory quantity and log the change
-     * Prevents negative inventory levels
+     * 
+     * This method is thread-safe and prevents race conditions using:
+     * 1. PDO Transactions (beginTransaction, commit, rollBack) for atomicity
+     * 2. Row-level locking (SELECT ... FOR UPDATE) to prevent concurrent modifications
+     * 
+     * Security Features:
+     * - Prevents negative inventory levels
+     * - Handles nested transactions correctly
+     * - Ensures all operations (read, update, log) are atomic
+     * - Locks the inventory row during adjustment to prevent lost updates
      * 
      * @param int $id Item ID
      * @param int $change Quantity change (positive to add, negative to subtract)
@@ -1197,7 +1206,9 @@ class Inventory {
                 $this->pdo->beginTransaction();
             }
             
-            // Get current item with row lock
+            // Get current item with row lock (SELECT ... FOR UPDATE)
+            // This locks the row until the transaction is committed, preventing
+            // other transactions from reading or modifying it concurrently
             $stmt = $this->pdo->prepare("SELECT quantity, name FROM inventory WHERE id = ? FOR UPDATE");
             $stmt->execute([$id]);
             $item = $stmt->fetch(PDO::FETCH_ASSOC);
