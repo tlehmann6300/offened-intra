@@ -830,6 +830,134 @@ class Auth {
     }
     
     /**
+     * Create an alumni account with email and password
+     * Only accessible to board members (vorstand) and admins
+     * 
+     * @param string $email Email address for the alumni account
+     * @param string $firstname First name
+     * @param string $lastname Last name
+     * @param string $password Initial password (will be hashed)
+     * @return array Result array with 'success' (bool), 'message' (string), and optionally 'user_id' (int)
+     */
+    public function createAlumniAccount(string $email, string $firstname, string $lastname, string $password): array {
+        try {
+            // Check if current user has permission (vorstand or admin only)
+            if (!$this->isLoggedIn()) {
+                $this->log("Alumni account creation failed: User not logged in");
+                return [
+                    'success' => false,
+                    'message' => 'Sie müssen angemeldet sein, um Alumni-Konten zu erstellen.'
+                ];
+            }
+            
+            $currentRole = $this->getUserRole();
+            if (!in_array($currentRole, ['vorstand', 'admin'], true)) {
+                $this->log("Alumni account creation failed: Insufficient permissions for role: {$currentRole}");
+                return [
+                    'success' => false,
+                    'message' => 'Keine Berechtigung. Nur Vorstand und Admins können Alumni-Konten erstellen.'
+                ];
+            }
+            
+            // Validate and sanitize inputs
+            $email = trim($email);
+            $firstname = trim($firstname);
+            $lastname = trim($lastname);
+            $password = trim($password);
+            
+            // Validate email format
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->log("Alumni account creation failed: Invalid email format: {$email}");
+                return [
+                    'success' => false,
+                    'message' => 'Ungültige E-Mail-Adresse.'
+                ];
+            }
+            
+            // Validate required fields
+            if (empty($email) || empty($firstname) || empty($lastname) || empty($password)) {
+                $this->log("Alumni account creation failed: Missing required fields");
+                return [
+                    'success' => false,
+                    'message' => 'Alle Felder sind erforderlich (E-Mail, Vorname, Nachname, Passwort).'
+                ];
+            }
+            
+            // Validate password strength (minimum 8 characters)
+            if (strlen($password) < 8) {
+                $this->log("Alumni account creation failed: Password too short");
+                return [
+                    'success' => false,
+                    'message' => 'Das Passwort muss mindestens 8 Zeichen lang sein.'
+                ];
+            }
+            
+            // Check if email already exists
+            $stmt = $this->pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                $this->log("Alumni account creation failed: Email already exists: {$email}");
+                return [
+                    'success' => false,
+                    'message' => 'Ein Konto mit dieser E-Mail-Adresse existiert bereits.'
+                ];
+            }
+            
+            // Hash the password using password_hash with default algorithm (bcrypt)
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            // Create the alumni user account
+            $stmt = $this->pdo->prepare("
+                INSERT INTO users (email, firstname, lastname, role, password, created_at, updated_at)
+                VALUES (?, ?, ?, 'alumni', ?, NOW(), NOW())
+            ");
+            
+            $result = $stmt->execute([$email, $firstname, $lastname, $hashedPassword]);
+            
+            if ($result) {
+                $newUserId = (int)$this->pdo->lastInsertId();
+                $this->log("Alumni account created successfully - ID: {$newUserId}, Email: {$email} by user ID: " . $this->getUserId());
+                
+                // Log to SystemLogger if available
+                if ($this->systemLogger) {
+                    $this->systemLogger->logAction(
+                        $this->getUserId() ?? 0,
+                        'create_alumni_account',
+                        'users',
+                        $newUserId,
+                        "Alumni account created for {$email}"
+                    );
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'Alumni-Konto erfolgreich erstellt.',
+                    'user_id' => $newUserId
+                ];
+            }
+            
+            $this->log("Alumni account creation failed: Database insert failed for email: {$email}");
+            return [
+                'success' => false,
+                'message' => 'Fehler beim Erstellen des Alumni-Kontos.'
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during alumni account creation: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+            ];
+        } catch (Exception $e) {
+            $this->log("Unexpected error during alumni account creation: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein unerwarteter Fehler ist aufgetreten. Bitte kontaktieren Sie den Administrator.'
+            ];
+        }
+    }
+    
+    /**
      * Log message to application log file
      * 
      * @param string $message Message to log
