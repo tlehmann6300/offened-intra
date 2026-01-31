@@ -170,7 +170,7 @@ function loadMoreNews() {
             loadingSpinner.classList.add('d-none');
         }
         
-        // Check if data indicates success AND articles exist AND array has content
+        // Process articles if available
         if (data.success && data.articles && data.articles.length > 0) {
             // Append new articles to grid with fade-in animation
             appendArticlesToGrid(data.articles, newsGrid);
@@ -192,7 +192,7 @@ function loadMoreNews() {
                 loadMoreBtn.disabled = true;
                 loadMoreBtn.innerHTML = '<i class="fas fa-check me-2"></i>Alle Beiträge geladen';
             }
-        } else if (data.articles && data.articles.length === 0) {
+        } else if (data.articles?.length === 0) {
             // No more articles available - end reached
             // Show "no more articles" message
             const message = document.createElement('div');
