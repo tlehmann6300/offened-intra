@@ -1,6 +1,9 @@
 <?php
 // Note: Classes are loaded by the router (index.php) before this template
-// so News, Event, and Project classes are available
+// so News, Event, Project, Inventory, and Alumni classes are available
+
+// Configuration constants
+define('LOW_STOCK_THRESHOLD', 5);
 
 // Initialize services
 $newsService = null;
@@ -15,10 +18,6 @@ $systemLogger = new SystemLogger($pdo);
 $news = new News($pdo, $newsService, $systemLogger);
 $event = new Event($pdo, $newsService);
 $project = new Project($pdo);
-
-// Initialize Inventory and Alumni for dashboard teasers
-require_once BASE_DIR . '/src/Inventory.php';
-require_once BASE_DIR . '/src/Alumni.php';
 $inventory = new Inventory($pdo, $systemLogger);
 $alumni = new Alumni($pdo, $systemLogger);
 
@@ -36,7 +35,7 @@ try {
     $allInventoryItems = $inventory->getAll();
     $inventoryStats['total_items'] = count($allInventoryItems);
     $inventoryStats['low_stock'] = count(array_filter($allInventoryItems, function($item) {
-        return isset($item['quantity']) && $item['quantity'] < 5;
+        return isset($item['quantity']) && $item['quantity'] < LOW_STOCK_THRESHOLD;
     }));
 } catch (Exception $e) {
     error_log("Error fetching inventory stats: " . $e->getMessage());
