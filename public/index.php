@@ -114,7 +114,7 @@ foreach ($requiredFiles as $file) {
 // Auth initialisieren
 try {
     // Two-database architecture:
-    // - Auth uses $userPdo (User Database: dbs15253086)
+    // - Auth uses $userPdo (User Database for authentication)
     $userPdo = DatabaseManager::getUserConnection();
     $auth = new Auth($userPdo);
     logMessage("Auth system initialized successfully");

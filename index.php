@@ -241,8 +241,8 @@ require_once $systemLoggerPath;
 
 // Initialize Auth system with SystemLogger
 // Note: Two-database architecture:
-// - Auth uses $userPdo (User Database: dbs15253086)
-// - SystemLogger uses $contentPdo (Content Database: dbs15161271)
+// - Auth uses $userPdo (User Database for authentication)
+// - SystemLogger uses $contentPdo (Content Database for operational logs)
 try {
     $systemLogger = new SystemLogger($contentPdo);
     $auth = new Auth($userPdo, $systemLogger);

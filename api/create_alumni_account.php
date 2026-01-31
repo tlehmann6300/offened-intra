@@ -73,8 +73,8 @@ if (session_status() === PHP_SESSION_NONE) {
 try {
     // Initialize Auth with SystemLogger
     // Two-database architecture:
-    // - Auth uses $userPdo (User Database: dbs15253086)
-    // - SystemLogger uses $contentPdo (Content Database: dbs15161271)
+    // - Auth uses $userPdo (User Database for authentication)
+    // - SystemLogger uses $contentPdo (Content Database for operational logs)
     $userPdo = DatabaseManager::getUserConnection();
     $contentPdo = DatabaseManager::getContentConnection();
     $auth = new Auth($userPdo, new SystemLogger($contentPdo));
