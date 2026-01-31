@@ -19,6 +19,27 @@ This directory contains SQL migration scripts for database schema changes and op
   - `idx_news_title` on `news(title)` - for news title searches
 - **Use Case**: Optimize global search performance by avoiding full table scans
 
+### 003_add_login_attempts_table.sql
+- **Purpose**: Create login_attempts table for rate limiting
+- **Use Case**: Track login attempts and implement rate limiting
+
+### 004_add_totp_to_users.sql
+- **Purpose**: Add TOTP (Two-Factor Authentication) fields to users table
+- **Use Case**: Enable two-factor authentication for users
+
+### 005_add_alumni_validation_fields.sql
+- **Purpose**: Add alumni validation workflow fields
+- **Columns Added**:
+  - `is_alumni_validated TINYINT(1) DEFAULT 0` - Alumni validation status
+  - `alumni_status_requested_at TIMESTAMP NULL` - Timestamp of alumni status request
+- **Index Created**: `idx_alumni_validation` on `users(role, is_alumni_validated)`
+- **Use Case**: Implement alumni validation workflow where:
+  1. Members can request alumni status
+  2. is_alumni_validated is set to FALSE initially
+  3. Access to active projects is immediately revoked
+  4. Admin/Vorstand validates the profile
+  5. Profile becomes visible in directory after validation
+
 ## How to Run
 
 ### Option 1: Using MySQL Command Line

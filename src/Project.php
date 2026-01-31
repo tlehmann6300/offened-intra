@@ -6,6 +6,10 @@ declare(strict_types=1);
  * Handles all CRUD operations for the project system
  * Manages projects with status, dates, and team information
  * 
+ * Alumni Access Control:
+ * - Alumni users (especially unvalidated ones) are restricted from accessing active project data
+ * - Use getAllForUser() and getLatestForUser() methods with user role to enforce restrictions
+ * 
  * @requires PHP 8.0+ (uses typed properties and union types)
  */
 class Project {
@@ -25,14 +29,27 @@ class Project {
     }
     
     /**
-     * Get all projects with optional filter
+     * Check if user role has access to active projects
+     * Alumni users do not have access to active project data
+     * 
+     * @param string $userRole User's role
+     * @return bool True if user can access active projects, false otherwise
+     */
+    private function canAccessActiveProjects(string $userRole): bool {
+        // Alumni users cannot access active project data
+        return $userRole !== 'alumni';
+    }
+    
+    /**
+     * Get all projects with optional filter and role-based access control
      * 
      * @param string|null $status Filter by status (planning, active, on_hold, completed, cancelled)
      * @param int $limit Maximum number of projects to return
      * @param int $offset Starting position for pagination
+     * @param string|null $userRole User role for access control (null = no restrictions)
      * @return array List of projects
      */
-    public function getAll(?string $status = null, int $limit = 100, int $offset = 0): array {
+    public function getAll(?string $status = null, int $limit = 100, int $offset = 0, ?string $userRole = null): array {
         try {
             $sql = "SELECT 
                         p.id, 
@@ -56,10 +73,20 @@ class Project {
                     LEFT JOIN users u ON p.project_lead_id = u.id";
             
             $params = [];
+            $whereConditions = [];
             
             if ($status) {
-                $sql .= " WHERE p.status = ?";
+                $whereConditions[] = "p.status = ?";
                 $params[] = $status;
+            }
+            
+            // Alumni access restriction: exclude active project data
+            if ($userRole && !$this->canAccessActiveProjects($userRole)) {
+                $whereConditions[] = "p.status NOT IN ('planning', 'active')";
+            }
+            
+            if (!empty($whereConditions)) {
+                $sql .= " WHERE " . implode(' AND ', $whereConditions);
             }
             
             $sql .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
@@ -79,11 +106,18 @@ class Project {
     /**
      * Get latest projects for dashboard
      * Returns only projects in 'planning' or 'active' status
+     * Alumni users are excluded from accessing this data
      * 
      * @param int $limit Maximum number of projects to return (default: 3)
-     * @return array List of latest projects
+     * @param string|null $userRole User role for access control (null = no restrictions)
+     * @return array List of latest projects (empty array for alumni users)
      */
-    public function getLatest(int $limit = 3): array {
+    public function getLatest(int $limit = 3, ?string $userRole = null): array {
+        // Alumni users cannot access active project data
+        if ($userRole && !$this->canAccessActiveProjects($userRole)) {
+            return [];
+        }
+        
         try {
             $stmt = $this->pdo->prepare("
                 SELECT 
@@ -121,12 +155,14 @@ class Project {
     }
     
     /**
-     * Get a single project by ID
+     * Get a single project by ID with role-based access control
+     * Alumni users cannot access active projects
      * 
      * @param int $id Project ID
-     * @return array|null Project data or null if not found
+     * @param string|null $userRole User role for access control (null = no restrictions)
+     * @return array|null Project data or null if not found or access denied
      */
-    public function getById(int $id): ?array {
+    public function getById(int $id, ?string $userRole = null): ?array {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT 
@@ -155,7 +191,19 @@ class Project {
             $stmt->execute([$id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return $result ?: null;
+            if (!$result) {
+                return null;
+            }
+            
+            // Alumni access restriction: cannot view active projects
+            if ($userRole && !$this->canAccessActiveProjects($userRole)) {
+                if (in_array($result['status'], ['planning', 'active'], true)) {
+                    error_log("Access denied: Alumni user attempted to access active project ID: {$id}");
+                    return null;
+                }
+            }
+            
+            return $result;
         } catch (PDOException $e) {
             error_log("Error fetching project by ID: " . $e->getMessage());
             return null;
@@ -163,14 +211,16 @@ class Project {
     }
     
     /**
-     * Search projects by query
+     * Search projects by query with role-based access control
      * Searches in title, description, and client fields
+     * Alumni users can only search completed/cancelled projects
      * 
      * @param string $query Search query
      * @param int $limit Maximum number of results
+     * @param string|null $userRole User role for access control (null = no restrictions)
      * @return array List of matching projects
      */
-    public function search(string $query, int $limit = 10): array {
+    public function search(string $query, int $limit = 10, ?string $userRole = null): array {
         try {
             // Limit search query length
             $query = substr(trim($query), 0, 255);
@@ -179,7 +229,7 @@ class Project {
                 return [];
             }
             
-            $stmt = $this->pdo->prepare("
+            $sql = "
                 SELECT 
                     p.id, 
                     p.title, 
@@ -188,14 +238,26 @@ class Project {
                     p.status,
                     p.created_at
                 FROM projects p
-                WHERE (p.title LIKE ? OR p.description LIKE ? OR p.client LIKE ?)
-                AND p.status IN ('planning', 'active')
-                ORDER BY p.created_at DESC
-                LIMIT ?
-            ");
+                WHERE (p.title LIKE ? OR p.description LIKE ? OR p.client LIKE ?)";
             
+            $params = [];
             $searchTerm = '%' . $query . '%';
-            $stmt->execute([$searchTerm, $searchTerm, $searchTerm, $limit]);
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            
+            // Alumni access restriction
+            if ($userRole && !$this->canAccessActiveProjects($userRole)) {
+                $sql .= " AND p.status NOT IN ('planning', 'active')";
+            } else {
+                $sql .= " AND p.status IN ('planning', 'active')";
+            }
+            
+            $sql .= " ORDER BY p.created_at DESC LIMIT ?";
+            $params[] = $limit;
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
             
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -205,14 +267,21 @@ class Project {
     }
     
     /**
-     * Count open project positions
+     * Count open project positions with role-based access control
      * Counts all projects with status 'planning' or 'active' that represent
      * available project opportunities for members to join.
      * Note: This counts projects (not individual team member positions).
+     * Alumni users receive 0 count as they cannot access active projects.
      * 
+     * @param string|null $userRole User role for access control (null = no restrictions)
      * @return int Number of open projects
      */
-    public function countOpenPositions(): int {
+    public function countOpenPositions(?string $userRole = null): int {
+        // Alumni users cannot access active project data
+        if ($userRole && !$this->canAccessActiveProjects($userRole)) {
+            return 0;
+        }
+        
         try {
             $stmt = $this->pdo->prepare("
                 SELECT COUNT(*) as count
