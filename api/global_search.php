@@ -49,12 +49,29 @@ try {
     // Get and validate search query
     $query = trim($_GET['q'] ?? '');
     
+    // Get and validate pagination parameters
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+    $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+    
+    // Validate pagination parameters
+    if ($limit < 1 || $limit > 100) {
+        $limit = 50; // Default to 50
+    }
+    
+    if ($offset < 0) {
+        $offset = 0; // Default to 0
+    }
+    
     // Validate query length
     if (empty($query)) {
         echo json_encode([
             'success' => true,
             'message' => 'Leere Suchanfrage',
-            'results' => []
+            'results' => [],
+            'pagination' => [
+                'limit' => $limit,
+                'offset' => $offset
+            ]
         ]);
         exit;
     }
@@ -63,7 +80,11 @@ try {
         echo json_encode([
             'success' => true,
             'message' => 'Suchanfrage zu kurz (mindestens 2 Zeichen)',
-            'results' => []
+            'results' => [],
+            'pagination' => [
+                'limit' => $limit,
+                'offset' => $offset
+            ]
         ]);
         exit;
     }
@@ -73,7 +94,11 @@ try {
         echo json_encode([
             'success' => false,
             'message' => 'Suchanfrage zu lang (maximal 100 Zeichen)',
-            'results' => []
+            'results' => [],
+            'pagination' => [
+                'limit' => $limit,
+                'offset' => $offset
+            ]
         ]);
         exit;
     }
@@ -182,7 +207,7 @@ try {
         OR client LIKE :search18
         
         ORDER BY date DESC
-        LIMIT 50
+        LIMIT :limit OFFSET :offset
     ";
     
     // Prepare statement
@@ -192,6 +217,10 @@ try {
     for ($i = 1; $i <= 18; $i++) {
         $stmt->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
     }
+    
+    // Bind pagination parameters
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     
     // Execute query
     $stmt->execute();
@@ -259,7 +288,12 @@ try {
         'query' => $query,
         'total' => $totalCount,
         'counts' => $counts,
-        'results' => $groupedResults
+        'results' => $groupedResults,
+        'pagination' => [
+            'limit' => $limit,
+            'offset' => $offset,
+            'returned' => $totalCount
+        ]
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     
 } catch (PDOException $e) {
@@ -269,7 +303,11 @@ try {
     echo json_encode([
         'success' => false,
         'message' => 'Datenbankfehler bei der Suche',
-        'results' => []
+        'results' => [],
+        'pagination' => [
+            'limit' => $limit ?? 50,
+            'offset' => $offset ?? 0
+        ]
     ]);
 } catch (Exception $e) {
     // Log general error
@@ -278,6 +316,10 @@ try {
     echo json_encode([
         'success' => false,
         'message' => 'Fehler bei der Suche',
-        'results' => []
+        'results' => [],
+        'pagination' => [
+            'limit' => $limit ?? 50,
+            'offset' => $offset ?? 0
+        ]
     ]);
 }
