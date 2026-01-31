@@ -10,10 +10,17 @@ require_once BASE_PATH . '/src/Event.php';
 require_once BASE_PATH . '/src/NewsService.php';
 require_once BASE_PATH . '/src/CalendarService.php';
 require_once BASE_PATH . '/src/HelperService.php';
+require_once BASE_PATH . '/src/MailService.php';
+
+// Get database connections
+$pdoContent = Database::getContentConnection();
+$pdoUser = Database::getUserConnection();
+
 $newsService = new NewsService($pdo);
 $event = new Event($pdo, $newsService);
 $calendarService = new CalendarService($pdo);
-$helperService = new HelperService($pdo);
+$mailService = new MailService();
+$helperService = new HelperService($pdoContent, $pdoUser, $mailService);
 
 // Get next event for countdown
 $nextEvent = $event->getNextEvent();
