@@ -2768,6 +2768,9 @@ function initAlumniDatabaseSearch() {
     // Fallback value matches ALUMNI_BIO_PREVIEW_LENGTH_DB in alumni_database.php
     const ALUMNI_BIO_PREVIEW_LENGTH = window.ALUMNI_BIO_PREVIEW_LENGTH || 120;
     
+    // Number of skeleton placeholders to show during loading
+    const ALUMNI_SKELETON_COUNT = 6;
+    
     let searchTimeout = null;
     
     /**
@@ -2785,7 +2788,7 @@ function initAlumniDatabaseSearch() {
         
         // Show skeleton loaders instead of empty grid
         if (gridContainer) {
-            gridContainer.innerHTML = createAlumniSkeleton(6);
+            gridContainer.innerHTML = createAlumniSkeleton(ALUMNI_SKELETON_COUNT);
         }
         
         // Prepare form data
