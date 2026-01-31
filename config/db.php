@@ -35,9 +35,52 @@ define('DB_USER', DB_CONTENT_USER);
 define('DB_PASS', DB_CONTENT_PASS);
 
 // =============================================================================
-// Database Connection Class - Singleton Pattern with Multi-Database Support
+// DatabaseManager Class - Singleton Pattern with Multi-Database Support
 // =============================================================================
-class Database {
+/**
+ * DatabaseManager - Multi-Database Connection Manager
+ * 
+ * This class manages two separate PDO database connections for the IBC-Intra system:
+ * 
+ * 1. Content Database ($contentDbInstance):
+ *    - Hosts: Projekte (Projects), Inventar (Inventory), Events, News
+ *    - Server: db5019375140.hosting-data.io
+ *    - Database: dbs15161271
+ * 
+ * 2. User Database ($userDbInstance):
+ *    - Hosts: Benutzerkonten (User Accounts), Alumni-Profile
+ *    - Server: db5019508945.hosting-data.io
+ *    - Database: dbs15253086
+ * 
+ * Singleton Pattern Implementation:
+ * - Each database connection is lazily initialized on first access
+ * - Connections are reused across the application (single instance per database)
+ * - Private constructor and __clone() prevent direct instantiation
+ * 
+ * Error Handling:
+ * - Each database connection has independent error handling
+ * - Connection failures display user-friendly error pages instead of crashing
+ * - Errors are logged securely without exposing sensitive information
+ * - HTTP 503 status codes are returned for service unavailability
+ * 
+ * Usage Examples:
+ * 
+ *   // Get Content Database for inventory, events, projects, news
+ *   $pdoContent = DatabaseManager::getContentConnection();
+ *   $event = new Event($pdoContent);
+ * 
+ *   // Get User Database for authentication, alumni profiles
+ *   $pdoUser = DatabaseManager::getUserConnection();
+ *   $auth = new Auth($pdoUser);
+ * 
+ *   // Legacy compatibility - returns Content DB
+ *   $pdo = DatabaseManager::getConnection();
+ * 
+ * @author IBC Development Team
+ * @version 2.0.0
+ * @since 2.0.0 Multi-database support added
+ */
+class DatabaseManager {
     private static ?PDO $contentDbInstance = null;
     private static ?PDO $userDbInstance = null;
     
@@ -263,4 +306,4 @@ class Database {
 }
 
 // Create global $pdo variable for backward compatibility
-$pdo = Database::getConnection();
+$pdo = DatabaseManager::getConnection();

@@ -31,7 +31,7 @@ function testConcurrentAdjustments(): void {
     echo "=== Testing Concurrent Inventory Adjustments ===\n\n";
     
     try {
-        $pdo = Database::getConnection();
+        $pdo = DatabaseManager::getConnection();
         $inventory = new Inventory($pdo);
         
         // Create a test item if it doesn't exist
