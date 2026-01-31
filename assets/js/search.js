@@ -85,11 +85,52 @@ function initializeSearchInstances() {
 }
 
 /**
+ * Create skeleton placeholders for global search results
+ * Shows structured placeholders for the 5 main result categories
+ */
+function createGlobalSearchSkeleton() {
+    const categories = [
+        { icon: 'fa-boxes', name: 'Gegenstände', count: 2 },
+        { icon: 'fa-user-graduate', name: 'Personen', count: 2 },
+        { icon: 'fa-newspaper', name: 'News', count: 1 },
+        { icon: 'fa-calendar-alt', name: 'Events', count: 1 },
+        { icon: 'fa-briefcase', name: 'Projekte', count: 1 }
+    ];
+    
+    let html = '<div class="dropdown-header bg-light border-bottom placeholder-glow">';
+    html += '<span class="placeholder col-6 bg-secondary"></span>';
+    html += '</div>';
+    
+    categories.forEach(category => {
+        html += `<h6 class="dropdown-header placeholder-glow">
+            <i class="fas ${category.icon} me-2"></i>
+            <span class="placeholder col-4 bg-secondary"></span>
+        </h6>`;
+        
+        for (let i = 0; i < category.count; i++) {
+            html += `<div class="dropdown-item" aria-hidden="true">
+                <div class="placeholder-glow">
+                    <div class="fw-bold mb-1">
+                        <span class="placeholder col-8 bg-secondary"></span>
+                    </div>
+                    <small class="text-muted d-block">
+                        <span class="placeholder col-10 bg-secondary"></span>
+                    </small>
+                </div>
+            </div>`;
+        }
+        html += '<div class="dropdown-divider"></div>';
+    });
+    
+    return html;
+}
+
+/**
  * Perform search API call using new global_search.php endpoint
  */
 function performSearch(query, instance, resultsContainer) {
-    // Show loading state
-    resultsContainer.innerHTML = '<div class="dropdown-item"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Suche läuft...</div>';
+    // Show structured skeleton placeholders
+    resultsContainer.innerHTML = createGlobalSearchSkeleton();
     resultsContainer.classList.add('show');
     
     fetch('api/global_search.php?q=' + encodeURIComponent(query))
