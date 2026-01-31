@@ -1,0 +1,21 @@
+{
+  "name": "ibc-intra",
+  "version": "1.0.0",
+  "description": "IBC Intranet Portal - Build Scripts",
+  "scripts": {
+    "build": "npm run build:js && npm run build:css",
+    "build:js": "node build/build-js.js",
+    "build:css": "node build/build-css.js",
+    "verify": "bash verify-build.sh"
+  },
+  "keywords": ["intranet", "build", "optimization"],
+  "author": "IBC",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "terser": "^5.27.0",
+    "cssnano": "^6.0.3",
+    "postcss": "^8.4.33",
+    "purgecss": "^5.0.0"
+  }
+}

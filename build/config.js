@@ -1,0 +1,27 @@
+// Build configuration for IBC-Intra
+// This file contains shared configuration used by build scripts
+
+module.exports = {
+  // JavaScript files to combine (in order)
+  jsFiles: [
+    'main.js',
+    'navbar-responsive.js',
+    'mobile-navigation.js',
+    'news.js',
+    'pull-to-refresh.js',
+    'search.js'
+  ],
+  
+  // CSS files to optimize
+  cssFiles: [
+    { input: 'fonts.css', output: 'fonts.min.css' },
+    { input: 'theme.css', output: 'theme.min.css' },
+    { input: 'style.css', output: 'style.min.css' }
+  ],
+  
+  // Output filenames
+  output: {
+    js: 'app.min.js',
+    cssSuffix: '.min.css'
+  }
+};

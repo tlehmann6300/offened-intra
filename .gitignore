@@ -1,0 +1,58 @@
+# Uploaded files (keep directory structure but not uploaded images)
+assets/uploads/*
+!assets/uploads/.gitkeep
+
+# Environment variables (NEVER commit credentials!)
+.env
+.env.*
+!.env.example
+
+# Environment-specific config (if you create separate dev/prod configs)
+config/local.php
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+test-navbar-responsive.html
+
+# Logs
+*.log
+error_log
+access_log
+login_debug.txt
+
+# Database dumps (except schema.sql, seeds.sql and other setup files)
+*.sql
+!create_database_sql/schema.sql
+!create_database_sql/seeds.sql
+!create_database_sql/setup.sql
+!create_database_sql/dummy_data.sql
+!create_database_sql/migration_*.sql
+!create_database_sql/update_*.sql
+!create_database_sql/newsletter_*.sql
+!create_database_sql/setup_test_user.sql
+!create_database_sql/inventory_schema.sql
+!create_database_sql/inventory_sample_data.sql
+!create_database_sql/alumni_schema.sql
+!create_database_sql/news_schema.sql
+
+# Vendor dependencies (composer packages)
+vendor/
+
+# Temporary test files (keep check_requirements.php for users)
+test_error_handling.php
+
+demo/

@@ -1,0 +1,262 @@
+/**
+ * IBC-Intra Custom Styles
+ * Minimal custom CSS - Bootstrap 5 utility classes are preferred
+ * Business-Clean Design with High Contrast
+ */
+
+/* ===================================
+   ROOT VARIABLES (for consistency)
+   =================================== */
+:root {
+    --primary-color: #0d6efd;
+    --dark-color: #212529;
+    --light-bg: #f8f9fa;
+}
+
+/* ===================================
+   GENERAL LAYOUT
+   =================================== */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #212529;
+    background-color: #f8f9fa;
+}
+
+/* Ensure main content pushes footer to bottom */
+.min-vh-100 {
+    min-height: 100vh;
+}
+
+.flex-grow-1 {
+    flex: 1 0 auto;
+}
+
+/* ===================================
+   NAVBAR CUSTOMIZATIONS
+   =================================== */
+.navbar-brand img {
+    max-height: 40px;
+    width: auto;
+}
+
+/* Navbar link hover effect */
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus {
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
+}
+
+/* Active nav item */
+.navbar-dark .navbar-nav .nav-link.active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 0.375rem;
+}
+
+/* ===================================
+   MOBILE BOTTOM NAVIGATION
+   =================================== */
+.mobile-bottom-nav {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1020;
+}
+
+.mobile-bottom-nav a:hover,
+.mobile-bottom-nav button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
+}
+
+/* Add padding to body on mobile when bottom nav is visible */
+@media (max-width: 991.98px) {
+    body.logged-in {
+        padding-bottom: 70px;
+    }
+}
+
+/* ===================================
+   MOBILE SEARCH OVERLAY
+   =================================== */
+.mobile-search-overlay {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+}
+
+.mobile-search-overlay.show {
+    display: block !important;
+}
+
+/* ===================================
+   EDIT MODE STYLES
+   =================================== */
+.edit-mode-enabled {
+    /* Visual indicator when edit mode is active */
+    border-top: 3px solid #ffc107;
+}
+
+/* ===================================
+   CARDS AND CONTENT
+   =================================== */
+.card {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* ===================================
+   FOOTER STYLES
+   =================================== */
+footer a:hover {
+    color: #fff !important;
+    text-decoration: underline !important;
+}
+
+footer address {
+    font-style: normal;
+    line-height: 1.8;
+}
+
+/* ===================================
+   ACCESSIBILITY & CONTRAST
+   =================================== */
+/* Ensure high contrast for links */
+a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #0a58ca;
+    text-decoration: underline;
+}
+
+/* Focus states for keyboard navigation */
+a:focus,
+button:focus,
+.btn:focus,
+.form-control:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+/* ===================================
+   RESPONSIVE UTILITIES
+   =================================== */
+/* Ensure text is readable on small screens */
+@media (max-width: 575.98px) {
+    body {
+        font-size: 0.9rem;
+    }
+    
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.25rem;
+    }
+}
+
+/* ===================================
+   UTILITY CLASSES
+   =================================== */
+/* High contrast text */
+.text-high-contrast {
+    color: #000;
+    font-weight: 500;
+}
+
+/* Professional spacing */
+.section-padding {
+    padding: 3rem 0;
+}
+
+@media (max-width: 767.98px) {
+    .section-padding {
+        padding: 2rem 0;
+    }
+}
+
+/* ===================================
+   NOTIFICATION STYLES
+   =================================== */
+.position-relative .badge {
+    font-size: 0.625rem;
+    padding: 0.25em 0.4em;
+}
+
+/* ===================================
+   SEARCH COMPONENT
+   =================================== */
+.navbar-search-wrapper {
+    min-width: 200px;
+}
+
+@media (max-width: 991.98px) {
+    .navbar-search-wrapper {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}
+
+/* ===================================
+   DROPDOWN MENUS
+   =================================== */
+.dropdown-menu {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-item {
+    transition: background-color 0.15s ease-in-out;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #e9ecef;
+}
+
+/* ===================================
+   LOADING STATES
+   =================================== */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.125rem;
+}
+
+/* ===================================
+   PRINT STYLES
+   =================================== */
+@media print {
+    .navbar,
+    .mobile-bottom-nav,
+    footer,
+    .mobile-search-overlay,
+    .btn,
+    .edit-mode-fab {
+        display: none !important;
+    }
+    
+    body {
+        background-color: white;
+        color: black;
+    }
+}

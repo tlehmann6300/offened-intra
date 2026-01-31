@@ -1,0 +1,173 @@
+# JE Alumni Connect - Apache Configuration
+# Enable rewrite engine for clean URLs
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # SECURITY: Hard deny access to .env file
+    RewriteRule ^\.env$ - [F,L]
+    
+    # SECURITY: Hard deny access to logs directory
+    RewriteRule ^logs(/|$) - [F,L]
+    
+    # SECURITY: Hard deny access to config directory
+    RewriteRule ^config(/|$) - [F,L]
+    
+    # SECURITY: Hard deny access to SQL directories
+    RewriteRule ^create_database_sql(/|$) - [F,L]
+    RewriteRule ^.*\.sql$ - [F,L]
+    
+    # Redirect to public/index.php if file/directory doesn't exist
+    # This routes all requests through the public directory
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    # First try to route to public/index.php for proper application entry point
+    RewriteRule ^(.*)$ public/index.php [L,QSA]
+</IfModule>
+
+# Security headers and caching
+<IfModule mod_headers.c>
+    # Security Headers
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Content Security Policy - Allow necessary external resources
+    # NOTE: 'unsafe-inline' is currently needed for:
+    # - Bootstrap inline styles and scripts
+    # - AOS (Animate On Scroll) inline initialization
+    # - Chart.js inline configurations
+    # TODO: Consider migrating to CSP nonces or hashes for better security
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://www.google.com https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://cdn.jsdelivr.net https://unpkg.com 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://www.google.com; frame-src 'self' https://www.google.com https://forms.office.com;"
+    
+    # HTTP Strict Transport Security (HSTS) - Force HTTPS for 1 year
+    # Note: Only enable this when HTTPS is properly configured
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+    
+    # Permissions Policy (formerly Feature Policy)
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    
+    # Explicit caching headers for image files (especially for logos and avatars in assets/img/)
+    # Using 'append' to work alongside mod_expires directives
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico)$">
+        # Cache for 1 year with immutable flag to prevent unnecessary revalidation
+        Header append Cache-Control "immutable"
+    </FilesMatch>
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Versteckt Apache-Serverinfos
+ServerSignature Off
+
+# Standard-Zeichensatz
+AddDefaultCharset UTF-8
+
+# CRITICAL SECURITY: Hard deny access to sensitive files and directories
+# Using multiple layers of protection for defense in depth
+
+# Layer 1: Deny .env file explicitly
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+# Layer 2: Deny all log files
+<FilesMatch "\.log$">
+    Require all denied
+</FilesMatch>
+
+# Layer 3: Protect all sensitive configuration and system files
+<FilesMatch "^(\.htaccess|\.git.*|\.env.*|config\.php|db\.php|composer\.json|composer\.lock|package\.json|.*\.sql)$">
+    Require all denied
+</FilesMatch>
+
+# Layer 4: Hard deny access to sensitive directories
+# This provides directory-level protection in addition to rewrite rules
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    <DirectoryMatch "^.*/logs(/|$)">
+        Require all denied
+    </DirectoryMatch>
+    <DirectoryMatch "^.*/config(/|$)">
+        Require all denied
+    </DirectoryMatch>
+    <DirectoryMatch "^.*/create_database_sql(/|$)">
+        Require all denied
+    </DirectoryMatch>
+    <DirectoryMatch "^.*/(private|includes|templates|src)(/|$)">
+        Require all denied
+    </DirectoryMatch>
+</IfModule>
+
+# Layer 5: Rewrite rules for additional protection (already in place above)
+# Sperrt den privaten Ordner komplett (if exists)
+<IfModule mod_rewrite.c>
+    RewriteRule ^private/ - [F,L]
+    RewriteRule ^includes/ - [F,L]
+    RewriteRule ^templates/ - [F,L]
+    RewriteRule ^src/ - [F,L]
+    RewriteRule ^create_database_sql/ - [F,L]
+</IfModule>
+
+# PHP settings
+# IMPORTANT: Some hosting providers do not allow php_value in .htaccess
+# If you encounter a 500 error, comment out the entire block below
+<IfModule mod_php.c>
+    php_value upload_max_filesize 5M
+    php_value post_max_size 6M
+    php_value max_execution_time 60
+</IfModule>
+
+# Alternative PHP settings using php_flag (for PHP 7+)
+# Uncomment if the above doesn't work:
+# <IfModule mod_php7.c>
+#     php_value upload_max_filesize 5M
+#     php_value post_max_size 6M
+#     php_value max_execution_time 60
+# </IfModule>
+
+# ----------------------------------------------------------------------
+# PERFORMANCE OPTIMIZATION
+# ----------------------------------------------------------------------
+
+# Enable GZIP compression
+<IfModule mod_deflate.c>
+    # Compress HTML, CSS, JavaScript, Text, XML and fonts
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+    AddOutputFilterByType DEFLATE application/x-javascript application/xhtml+xml application/xml
+    AddOutputFilterByType DEFLATE application/rss+xml application/atom+xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE application/vnd.ms-fontobject application/x-font-ttf font/opentype
+</IfModule>
+
+# Browser caching
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images - Global caching
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType image/vnd.microsoft.icon "access plus 1 year"
+    
+    # CSS and JavaScript - Extended caching for better performance
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    ExpiresByType application/x-javascript "access plus 1 year"
+    
+    # Fonts
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+    
+    # HTML/PHP (no caching)
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>

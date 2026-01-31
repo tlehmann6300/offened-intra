@@ -1,0 +1,149 @@
+{
+  "_kommentar_datei": "Diese Datei enthält alle Informationen über Team-Mitglieder des IBC",
+  "_kommentar_verwendung": "Die Datei wird von content-loader.js geladen und auf der 'Über uns' Seite angezeigt",
+  "_kommentar_struktur": "Die Datei ist in drei Bereiche unterteilt: vorstand (Vorstandsmitglieder), ressorts (Ressortleiter) und plattform (Plattform-Manager)",
+  "_kommentar_wichtig": "Jedes Mitglied muss einen Namen, ein Bild, eine Position in 3 Sprachen und eine E-Mail haben. LinkedIn ist optional.",
+  
+  "vorstand": [
+    {
+      "_kommentar_bereich": "VORSTAND - Hier stehen die drei Vorstandsmitglieder des IBC",
+      "_kommentar_person": "ERSTES VORSTANDSMITGLIED - Vorstandsvorsitzender",
+      "name": "Yannik Platzek",
+      "_kommentar_name": "Vollständiger Name der Person",
+      "image": "assets/img/team/Yannik-scaled.webp",
+      "_kommentar_image": "Pfad zum Profilbild - Bild muss in assets/img/team/ Ordner existieren",
+      "position": {
+        "_kommentar": "Position in drei Sprachen - ALLE drei Sprachen müssen ausgefüllt sein!",
+        "de": "Vorstandsvorsitzender",
+        "en": "Chairman",
+        "fr": "Président du directoire"
+      },
+      "email": "yannik.platzek@business-consulting.de",
+      "_kommentar_email": "E-Mail-Adresse - wird auf der Website angezeigt und kann von Besuchern kopiert werden",
+      "linkedin": "https://www.linkedin.com/in/yannik-platzek-346b1a333/",
+      "_kommentar_linkedin": "LinkedIn-Profil URL - muss mit https:// beginnen. Wenn kein Profil: 'null' eintragen (ohne Anführungszeichen)"
+    },
+    {
+      "_kommentar_person": "ZWEITES VORSTANDSMITGLIED - Stellvertretender Vorstandsvorsitzender",
+      "name": "David Meier",
+      "image": "assets/img/team/David-scaled.webp",
+      "position": {
+        "de": "Stellv. Vorstandsvorsitzender",
+        "en": "Vice Chairman",
+        "fr": "Vice-président du directoire"
+      },
+      "email": "david.meier@business-consulting.de",
+      "linkedin": "https://de.linkedin.com/in/david-meier-14b653334"
+    },
+    {
+      "_kommentar_person": "DRITTES VORSTANDSMITGLIED - Vorstand Finanzen & Recht",
+      "name": "Tobias Weigold",
+      "image": "assets/img/team/Tobi-scaled.webp",
+      "position": {
+        "de": "Vorstand Finanzen & Recht",
+        "en": "Board Member Finance & Legal",
+        "fr": "Directeur Finances et Droit"
+      },
+      "email": "tobias.weigold@business-consulting.de",
+      "linkedin": "https://www.linkedin.com/in/tobias-weigold-16962836b/"
+    }
+  ],
+  
+  "ressorts": [
+    {
+      "_kommentar_bereich": "RESSORTS - Hier stehen die Ressortleiter (Leiter von Fachbereichen)",
+      "_kommentar_ressort": "IT-Ressort",
+      "name": "Tom Kipp",
+      "image": "assets/img/team/Maskottchen.webp",
+      "_kommentar_bild": "Hier wird das Maskottchen als Platzhalterbild verwendet",
+      "position": {
+        "de": "Ressortleitung IT",
+        "en": "Head of IT",
+        "fr": "Responsable IT"
+      },
+      "email": "tom.kipp@business-consulting.de",
+      "linkedin": "https://www.linkedin.com/in/tom-kipp-b01a5a361/"
+    },
+    {
+      "_kommentar_ressort": "Marketing-Ressort",
+      "name": "Tobias Eulert",
+      "image": "assets/img/team/Euli-scaled.webp",
+      "position": {
+        "de": "Ressortleitung Marketing",
+        "en": "Head of Marketing",
+        "fr": "Responsable Marketing"
+      },
+      "email": "tobias.eulert@business-consulting.de",
+      "linkedin": "https://de.linkedin.com/in/tobias-eulert-b16517297"
+    },
+    {
+      "_kommentar_ressort": "Human Resources-Ressort",
+      "name": "Alp-Tuna Karakaya",
+      "image": "assets/img/team/Alp-scaled.webp",
+      "position": {
+        "de": "Ressortleitung Human Resources",
+        "en": "Head of Human Resources",
+        "fr": "Responsable Ressources Humaines"
+      },
+      "email": "alp.karakaya@business-consulting.de",
+      "linkedin": null,
+      "_kommentar_linkedin": "null bedeutet: Kein LinkedIn-Profil vorhanden - dann wird kein LinkedIn-Symbol angezeigt"
+    },
+    {
+      "_kommentar_ressort": "Qualitätsmanagement-Ressort",
+      "name": "Jassir Hickel",
+      "image": "assets/img/team/Jassir-scaled.webp",
+      "position": {
+        "de": "Ressortleitung Qualitätsmanagement",
+        "en": "Head of Quality Management",
+        "fr": "Responsable Qualité"
+      },
+      "email": "jassir.hickel@business-consulting.de",
+      "linkedin": null
+    },
+    {
+      "_kommentar_ressort": "Akquise-Ressort",
+      "name": "Kilian Hermann",
+      "image": "assets/img/team/Kilian-scaled.webp",
+      "position": {
+        "de": "Ressortleitung Akquise",
+        "en": "Head of Acquisition",
+        "fr": "Responsable Acquisition"
+      },
+      "email": "kilian.hermann@business-consulting.de",
+      "linkedin": "https://de.linkedin.com/in/kilian-hermann-0605a3251"
+    }
+  ],
+  
+  "plattform": [
+    {
+      "_kommentar_bereich": "PLATTFORM - Hier stehen Manager für digitale Plattformen (SharePoint, Social Media)",
+      "_kommentar_plattform": "SharePoint-Manager",
+      "name": "Amelie Hentschke",
+      "image": "assets/img/team/Amelie-scaled.webp",
+      "position": {
+        "de": "SharePoint-Manager",
+        "en": "SharePoint Manager",
+        "fr": "Gestionnaire SharePoint"
+      },
+      "email": "amelie.hentschke@business-consulting.de",
+      "linkedin": null
+    },
+    {
+      "_kommentar_plattform": "Social Media Managerin",
+      "name": "Jennifer Schlotterbeck",
+      "image": "assets/img/team/Jenni-scaled.webp",
+      "position": {
+        "de": "Social Media Managerin",
+        "en": "Social Media Manager",
+        "fr": "Responsable Réseaux Sociaux"
+      },
+      "email": "jennifer.schlotterbeck@business-consulting.de",
+      "linkedin": "https://de.linkedin.com/in/jennifer-schlotterbeck-72299131a"
+    }
+  ],
+  
+  "_kommentar_anleitung_neues_mitglied": "Um ein neues Mitglied hinzuzufügen: 1) Kopieren Sie einen Eintrag von { bis }, 2) Fügen Sie ein Komma nach dem letzten Eintrag ein, 3) Fügen Sie den kopierten Eintrag ein, 4) Ändern Sie alle Daten",
+  "_kommentar_anleitung_mitglied_entfernen": "Um ein Mitglied zu entfernen: Löschen Sie den gesamten Eintrag von { bis } inklusive Komma davor oder danach",
+  "_kommentar_anleitung_bild": "Bilder müssen im Ordner Website/assets/img/team/ liegen. Empfohlenes Format: .webp, Auflösung: mindestens 400x400 Pixel"
+}
