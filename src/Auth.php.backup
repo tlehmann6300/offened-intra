@@ -4,39 +4,35 @@ declare(strict_types=1);
 /**
  * Authentication Class
  * 
- * Handles internal user authentication and session management with:
+ * Handles hybrid user authentication and session management with support for:
  * 
- * 1. AUTHENTICATION SYSTEM:
- *    - Email/Password authentication with TOTP 2FA
- *    - All users authenticate against users table in User-DB
+ * 1. HYBRID AUTHENTICATION SYSTEM:
+ *    - Microsoft SSO (for Vorstand/Board members): Use loginWithMicrosoft()
+ *    - Email/Password (for Alumni): Use loginWithPassword() or login()
  * 
- * 2. TWO-FACTOR AUTHENTICATION (TOTP):
- *    - Time-based One-Time Passwords (6-digit codes)
- *    - Mandatory after password verification
- *    - Uses Google Authenticator compatible implementation
- * 
- * 3. USER MANAGEMENT:
- *    - Create user accounts with email/password via createAlumniAccount()
+ * 2. USER MANAGEMENT (Board/Vorstand only):
+ *    - Create Alumni accounts with email/password via createAlumniAccount()
  *    - Requires 'vorstand' or 'admin' role
- *    - TOTP setup and management
  * 
- * 4. SELF-SERVICE:
+ * 3. SELF-SERVICE (Alumni users):
  *    - Change email via updateEmail() with password verification
  *    - Change password via updatePassword() with current password verification
  *    - Password strength validation via validatePasswordStrength()
- *    - Enable/disable TOTP 2FA
  * 
- * 5. SECURITY FEATURES:
- *    - Rate limiting (5 attempts per 15 minutes) using login_attempts table
- *    - Account lockout after failed attempts
+ * 4. SECURITY FEATURES:
+ *    - Rate limiting (5 attempts per 15 minutes)
  *    - Session validation across User database via validateSessionConsistency()
  *    - CSRF token generation and validation
  *    - Secure password hashing with password_hash()
  *    - Role-based access control with hierarchy
  * 
  * DATABASE ARCHITECTURE:
- * - User Database: Stores all user accounts, login attempts, TOTP secrets
+ * - User Database: Stores all user accounts (both SSO and password-based)
  * - Content Database: Stores projects, inventory, events, news
+ * 
+ * AUTHENTICATION METHODS:
+ * - 'microsoft': Microsoft SSO authentication (Vorstand)
+ * - 'password': Email/Password authentication (Alumni)
  * 
  * Implements secure login with prepared statements and detailed error handling
  */
@@ -44,7 +40,7 @@ class Auth {
     private PDO $pdo;
     private string $logFile;
     private ?SystemLogger $systemLogger;
-    private $googleAuth;
+    private string $rateLimitFile;
     
     // Rate limiting configuration
     private const MAX_LOGIN_ATTEMPTS = 5;
@@ -53,8 +49,8 @@ class Auth {
     public function __construct(PDO $pdo, ?SystemLogger $systemLogger = null) {
         $this->pdo = $pdo;
         $this->logFile = BASE_PATH . '/logs/app.log';
+        $this->rateLimitFile = BASE_PATH . '/logs/login_attempts.json';
         $this->systemLogger = $systemLogger;
-        $this->googleAuth = new \Sonata\GoogleAuthenticator\GoogleAuthenticator();
         
         // Ensure logs directory exists
         $logDir = dirname($this->logFile);
@@ -96,141 +92,151 @@ class Auth {
     }
 
     /**
-     * Check if IP address or email is rate limited
-     * Uses database table for persistent rate limiting
+     * Check if IP address is rate limited
      * 
      * @param string $ip IP address to check
-     * @param string|null $email Email address to check (optional)
      * @return bool True if rate limited, false otherwise
      */
-    private function isRateLimited(string $ip, ?string $email = null): bool {
-        try {
-            $now = time();
-            $windowStart = $now - self::RATE_LIMIT_WINDOW;
-            
-            // Check IP-based rate limiting
-            $stmt = $this->pdo->prepare("
-                SELECT COUNT(*) as attempt_count 
-                FROM login_attempts 
-                WHERE ip_address = ? 
-                AND success = 0 
-                AND attempt_time >= FROM_UNIXTIME(?)
-            ");
-            $stmt->execute([$ip, $windowStart]);
-            $ipAttempts = $stmt->fetchColumn();
-            
-            if ($ipAttempts >= self::MAX_LOGIN_ATTEMPTS) {
-                return true;
-            }
-            
-            // Check email-based rate limiting if email provided
-            if ($email) {
-                $stmt = $this->pdo->prepare("
-                    SELECT COUNT(*) as attempt_count 
-                    FROM login_attempts 
-                    WHERE email = ? 
-                    AND success = 0 
-                    AND attempt_time >= FROM_UNIXTIME(?)
-                ");
-                $stmt->execute([$email, $windowStart]);
-                $emailAttempts = $stmt->fetchColumn();
-                
-                if ($emailAttempts >= self::MAX_LOGIN_ATTEMPTS) {
-                    return true;
-                }
-            }
-            
-            return false;
-        } catch (PDOException $e) {
-            $this->log("Error checking rate limit: " . $e->getMessage());
-            // On error, allow login attempt (fail open for availability)
+    private function isRateLimited(string $ip): bool {
+        $attempts = $this->getLoginAttempts();
+        
+        if (!isset($attempts[$ip])) {
             return false;
         }
+        
+        $ipAttempts = $attempts[$ip];
+        $now = time();
+        
+        // Filter out expired attempts
+        $recentAttempts = array_filter($ipAttempts, function($timestamp) use ($now) {
+            return ($now - $timestamp) <= self::RATE_LIMIT_WINDOW;
+        });
+        
+        // Check if exceeded max attempts
+        return count($recentAttempts) >= self::MAX_LOGIN_ATTEMPTS;
     }
 
     /**
-     * Record a login attempt (successful or failed) for rate limiting
-     * Stores in database table for persistence and analysis
+     * Record a failed login attempt for rate limiting
      * 
      * @param string $ip IP address
-     * @param string|null $email Email address (if provided)
-     * @param bool $success Whether the attempt was successful
      */
-    private function recordLoginAttempt(string $ip, ?string $email = null, bool $success = false): void {
-        try {
-            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
-            if ($userAgent && strlen($userAgent) > 500) {
-                $userAgent = substr($userAgent, 0, 500);
-            }
-            
-            $stmt = $this->pdo->prepare("
-                INSERT INTO login_attempts (ip_address, email, success, user_agent) 
-                VALUES (?, ?, ?, ?)
-            ");
-            $stmt->execute([$ip, $email, $success ? 1 : 0, $userAgent]);
-            
-            // Clean up old attempts periodically (1% chance on each call)
-            if (rand(1, 100) === 1) {
-                $this->cleanupOldAttempts();
-            }
-        } catch (PDOException $e) {
-            $this->log("Error recording login attempt: " . $e->getMessage());
+    private function recordLoginAttempt(string $ip): void {
+        $attempts = $this->getLoginAttempts();
+        
+        if (!isset($attempts[$ip])) {
+            $attempts[$ip] = [];
+        }
+        
+        // Add current timestamp
+        $attempts[$ip][] = time();
+        
+        // Clean up old attempts (older than rate limit window)
+        $this->cleanupOldAttempts($attempts);
+        
+        // Save updated attempts
+        $this->saveLoginAttempts($attempts);
+    }
+
+    /**
+     * Get login attempts from file
+     * 
+     * @return array Login attempts data
+     */
+    private function getLoginAttempts(): array {
+        if (!file_exists($this->rateLimitFile)) {
+            return [];
+        }
+        
+        $data = file_get_contents($this->rateLimitFile);
+        if ($data === false) {
+            $this->log("Warning: Failed to read rate limit file");
+            return [];
+        }
+        
+        $attempts = json_decode($data, true);
+        return is_array($attempts) ? $attempts : [];
+    }
+
+    /**
+     * Save login attempts to file
+     * 
+     * @param array $attempts Login attempts data
+     */
+    private function saveLoginAttempts(array $attempts): void {
+        $json = json_encode($attempts, JSON_PRETTY_PRINT);
+        
+        // Check if file exists to set permissions on new files
+        $fileExists = file_exists($this->rateLimitFile);
+        
+        $result = file_put_contents($this->rateLimitFile, $json, LOCK_EX);
+        
+        if ($result === false) {
+            $this->log("Warning: Failed to write rate limit file");
+        } elseif (!$fileExists) {
+            // Set restrictive permissions on new file (read/write for owner only)
+            @chmod($this->rateLimitFile, 0600);
         }
     }
 
     /**
-     * Clean up old login attempts from database
-     * Removes entries older than the rate limit window
+     * Clean up old login attempts from data
+     * 
+     * @param array &$attempts Login attempts data (passed by reference)
      */
-    private function cleanupOldAttempts(): void {
-        try {
-            $cutoffTime = time() - (self::RATE_LIMIT_WINDOW * 2); // Keep 2x window for analysis
-            $stmt = $this->pdo->prepare("
-                DELETE FROM login_attempts 
-                WHERE attempt_time < FROM_UNIXTIME(?)
-            ");
-            $stmt->execute([$cutoffTime]);
-        } catch (PDOException $e) {
-            $this->log("Error cleaning up old login attempts: " . $e->getMessage());
+    private function cleanupOldAttempts(array &$attempts): void {
+        $now = time();
+        
+        foreach ($attempts as $ip => $timestamps) {
+            // Filter out expired attempts
+            $filtered = array_filter($timestamps, function($timestamp) use ($now) {
+                return ($now - $timestamp) <= self::RATE_LIMIT_WINDOW;
+            });
+            
+            // Reset array indices for JSON serialization
+            $attempts[$ip] = array_values($filtered);
+            
+            // Remove IP if no recent attempts
+            if (empty($attempts[$ip])) {
+                unset($attempts[$ip]);
+            }
         }
     }
 
     /**
      * Login method with strict database authentication
-     * Main entry point for password-based authentication
-     * Requires email, password, and TOTP code (if 2FA enabled)
+     * This is the main entry point for password-based authentication (Alumni)
+     * For Microsoft SSO (Vorstand), use loginWithMicrosoft() method instead
      * 
-     * @param string $email Email address
+     * @param string $email Email address (previously accepted username, now standardized to email)
      * @param string $password Password
-     * @param string|null $totpCode 6-digit TOTP code (required if 2FA enabled)
-     * @return array Result array with 'success' (bool), 'message' (string), and optionally 'requires_2fa' (bool)
+     * @param string|null $recaptchaResponse reCAPTCHA response token (optional for now)
+     * @return array Result array with 'success' (bool) and 'message' (string)
      */
-    public function login(string $email, string $password, ?string $totpCode = null): array {
+    public function login(string $email, string $password, ?string $recaptchaResponse = null): array {
         // Delegate to password-based authentication method
-        return $this->loginWithPassword($email, $password, $totpCode);
+        return $this->loginWithPassword($username, $password, $recaptchaResponse);
     }
     
     /**
-     * Password-based authentication with TOTP 2FA
-     * Validates email, password, and TOTP code against the User database
+     * Password-based authentication for Alumni users
+     * Validates email and password against the User database
+     * Only works for users with password set (Alumni with email/password login)
      * 
      * @param string $email Email address
      * @param string $password Password
-     * @param string|null $totpCode 6-digit TOTP code (required if 2FA enabled)
-     * @return array Result array with 'success' (bool), 'message' (string), and optionally 'requires_2fa' (bool)
+     * @param string|null $recaptchaResponse reCAPTCHA response token (optional for now)
+     * @return array Result array with 'success' (bool) and 'message' (string)
      */
-    public function loginWithPassword(string $email, string $password, ?string $totpCode = null): array {
+    public function loginWithPassword(string $email, string $password, ?string $recaptchaResponse = null): array {
         try {
             // Get client IP for rate limiting
             $clientIp = $this->getClientIp();
             
-            // Sanitize input
-            $email = trim($email);
-            $password = trim($password);
-            
-            // Check rate limiting (with email if provided)
-            if ($this->isRateLimited($clientIp, $email)) {
-                $this->log("Login blocked: Rate limit exceeded for IP: {$clientIp}, Email: {$email}");
+            // Check rate limiting
+            if ($this->isRateLimited($clientIp)) {
+                $this->log("Password login blocked: Rate limit exceeded for IP: " . $clientIp);
+                // Log to SystemLogger if available
                 if ($this->systemLogger) {
                     $this->systemLogger->logLoginAttempt($email, false, null, 'Rate limit exceeded');
                 }
@@ -242,12 +248,16 @@ class Auth {
             }
             
             // Log login attempt
-            $this->log("Login attempt for user: " . $email);
+            $this->log("Password login attempt for user: " . $email);
+            
+            // Sanitize input
+            $email = trim($email);
+            $password = trim($password);
             
             // Check for empty credentials
             if (empty($email) || empty($password)) {
-                $this->log("Login failed: Empty credentials for user: " . $email);
-                $this->recordLoginAttempt($clientIp, $email, false);
+                $this->log("Password login failed: Empty credentials for user: " . $email);
+                // Log to SystemLogger if available
                 if ($this->systemLogger) {
                     $this->systemLogger->logLoginAttempt($email, false, null, 'Empty credentials');
                 }
@@ -259,8 +269,7 @@ class Auth {
             
             // Validate email format
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $this->log("Login failed: Invalid email format: " . $email);
-                $this->recordLoginAttempt($clientIp, $email, false);
+                $this->log("Password login failed: Invalid email format: " . $email);
                 return [
                     'success' => false,
                     'message' => 'Ungültige E-Mail-Adresse.'
@@ -268,17 +277,15 @@ class Auth {
             }
             
             // Fetch user from database
-            $stmt = $this->pdo->prepare("
-                SELECT id, email, role, password, firstname, lastname, totp_secret, totp_enabled 
-                FROM users 
-                WHERE email = ?
-            ");
+            $stmt = $this->pdo->prepare("SELECT id, email, role, password, firstname, lastname FROM users WHERE email = ?");
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$user) {
-                $this->log("Login failed: User not found: " . $email);
-                $this->recordLoginAttempt($clientIp, $email, false);
+                $this->log("Password login failed: User not found: " . $email);
+                // Record failed attempt for rate limiting
+                $this->recordLoginAttempt($clientIp);
+                // Log to SystemLogger if available
                 if ($this->systemLogger) {
                     $this->systemLogger->logLoginAttempt($email, false, null, 'User not found');
                 }
@@ -288,23 +295,25 @@ class Auth {
                 ];
             }
             
-            // Check if user has a password set
+            // Check if user has a password set (required for password-based authentication)
             if (empty($user['password'])) {
-                $this->log("Login failed: No password set for user: " . $email);
-                $this->recordLoginAttempt($clientIp, $email, false);
+                $this->log("Password login failed: No password set for user: " . $email);
+                // Log to SystemLogger if available
                 if ($this->systemLogger) {
-                    $this->systemLogger->logLoginAttempt($email, false, (int)$user['id'], 'No password set');
+                    $this->systemLogger->logLoginAttempt($email, false, (int)$user['id'], 'No password set - SSO required');
                 }
                 return [
                     'success' => false,
-                    'message' => 'Für dieses Konto ist kein Passwort gesetzt. Bitte kontaktieren Sie den Administrator.'
+                    'message' => 'Für dieses Konto ist kein Passwort gesetzt. Bitte verwenden Sie Microsoft SSO zur Anmeldung.'
                 ];
             }
             
             // Verify password hash
             if (!password_verify($password, $user['password'])) {
-                $this->log("Login failed: Invalid password for user: " . $email);
-                $this->recordLoginAttempt($clientIp, $email, false);
+                $this->log("Password login failed: Invalid password for user: " . $email);
+                // Record failed attempt for rate limiting
+                $this->recordLoginAttempt($clientIp);
+                // Log to SystemLogger if available
                 if ($this->systemLogger) {
                     $this->systemLogger->logLoginAttempt($email, false, (int)$user['id'], 'Invalid password');
                 }
@@ -314,63 +323,136 @@ class Auth {
                 ];
             }
             
-            // Password verified - now check TOTP if enabled
-            if ($user['totp_enabled']) {
-                if (empty($totpCode)) {
-                    // Password is correct but TOTP code required
-                    // Store temporary session marker for TOTP verification
-                    $_SESSION['pending_2fa_user_id'] = $user['id'];
-                    $_SESSION['pending_2fa_time'] = time();
-                    
-                    return [
-                        'success' => false,
-                        'requires_2fa' => true,
-                        'message' => 'Bitte geben Sie Ihren 6-stelligen Authentifizierungscode ein.'
-                    ];
-                }
-                
-                // Verify TOTP code
-                if (!$this->verifyTotpCode($user['totp_secret'], $totpCode)) {
-                    $this->log("Login failed: Invalid TOTP code for user: " . $email);
-                    $this->recordLoginAttempt($clientIp, $email, false);
-                    if ($this->systemLogger) {
-                        $this->systemLogger->logLoginAttempt($email, false, (int)$user['id'], 'Invalid TOTP code');
-                    }
-                    return [
-                        'success' => false,
-                        'requires_2fa' => true,
-                        'message' => 'Ungültiger Authentifizierungscode. Bitte versuchen Sie es erneut.'
-                    ];
-                }
-            }
-            
-            // Clear any pending 2FA session markers
-            unset($_SESSION['pending_2fa_user_id']);
-            unset($_SESSION['pending_2fa_time']);
-            
-            // Authentication successful - record successful attempt
-            $this->recordLoginAttempt($clientIp, $email, true);
-            
+            // Password verified successfully - create session
             // Log successful login
             if ($this->systemLogger) {
                 $this->systemLogger->logLoginAttempt($email, true, (int)$user['id'], null);
             }
-            
             return $this->createUserSession($user, 'password');
             
         } catch (PDOException $e) {
-            $this->log("Database error during login: " . $e->getMessage());
+            $this->log("Database error during password login: " . $e->getMessage());
+            // Log to SystemLogger if available
             if ($this->systemLogger) {
-                $this->systemLogger->logLoginAttempt($email ?? 'unknown', false, null, 'Database error');
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Database error');
             }
             return [
                 'success' => false,
                 'message' => 'Ein Datenbankfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
             ];
         } catch (Exception $e) {
-            $this->log("Unexpected error during login: " . $e->getMessage());
+            $this->log("Unexpected error during password login: " . $e->getMessage());
+            // Log to SystemLogger if available
             if ($this->systemLogger) {
-                $this->systemLogger->logLoginAttempt($email ?? 'unknown', false, null, 'Unexpected error');
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Unexpected error');
+            }
+            return [
+                'success' => false,
+                'message' => 'Ein unerwarteter Fehler ist aufgetreten. Bitte kontaktieren Sie den Administrator.'
+            ];
+        }
+    }
+    
+    /**
+     * Microsoft SSO authentication for Vorstand (Board members)
+     * This method should be called from the Microsoft callback handler
+     * after the OAuth2 flow has been completed and user information extracted
+     * 
+     * @param string $email Email from Microsoft account
+     * @param string $firstname First name from Microsoft account
+     * @param string $lastname Last name from Microsoft account
+     * @param string $microsoftId Microsoft user ID (sub or oid from token) - Reserved for future use (e.g., account linking, audit trails)
+     * @return array Result array with 'success' (bool), 'message' (string), and optionally 'user' (array)
+     */
+    public function loginWithMicrosoft(string $email, string $firstname, string $lastname, string $microsoftId): array {
+        try {
+            $this->log("Microsoft SSO login attempt for user: " . $email);
+            
+            // Sanitize inputs
+            $email = trim($email);
+            $firstname = trim($firstname);
+            $lastname = trim($lastname);
+            $microsoftId = trim($microsoftId);
+            
+            // Validate email format
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->log("Microsoft SSO failed: Invalid email format: " . $email);
+                return [
+                    'success' => false,
+                    'message' => 'Ungültige E-Mail-Adresse vom Microsoft-Konto.'
+                ];
+            }
+            
+            // Check if user exists in database
+            $stmt = $this->pdo->prepare("SELECT id, email, role, firstname, lastname, password FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                // Existing user - log them in
+                $this->log("Microsoft SSO: Existing user found - ID: {$user['id']}, Role: {$user['role']}");
+                
+                // Log successful login
+                if ($this->systemLogger) {
+                    $this->systemLogger->logLoginAttempt($email, true, (int)$user['id'], 'Microsoft SSO');
+                }
+                
+                // Create session
+                $result = $this->createUserSession($user, 'microsoft');
+                $result['user'] = $user;
+                $result['is_new_user'] = false;
+                
+                return $result;
+                
+            } else {
+                // User doesn't exist - create new account with 'vorstand' role
+                // Microsoft SSO users are typically board members (Vorstand)
+                $this->log("Microsoft SSO: Creating new user account for {$email}");
+                
+                // Insert new user without password (SSO-only account)
+                // New SSO users get 'vorstand' role by default
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO users (email, firstname, lastname, role, created_at, updated_at) 
+                    VALUES (?, ?, ?, 'vorstand', NOW(), NOW())
+                ");
+                $stmt->execute([$email, $firstname, $lastname]);
+                $newUserId = (int)$this->pdo->lastInsertId();
+                
+                $this->log("Microsoft SSO: New user created - ID: {$newUserId}, Email: {$email}, Role: vorstand");
+                
+                // Fetch the newly created user
+                $stmt = $this->pdo->prepare("SELECT id, email, role, firstname, lastname FROM users WHERE id = ?");
+                $stmt->execute([$newUserId]);
+                $newUser = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // Log successful login
+                if ($this->systemLogger) {
+                    $this->systemLogger->logLoginAttempt($email, true, $newUserId, 'Microsoft SSO - New user');
+                }
+                
+                // Create session
+                $result = $this->createUserSession($newUser, 'microsoft');
+                $result['user'] = $newUser;
+                $result['is_new_user'] = true;
+                
+                return $result;
+            }
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during Microsoft SSO login: " . $e->getMessage());
+            // Log to SystemLogger if available
+            if ($this->systemLogger) {
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Database error during SSO');
+            }
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+            ];
+        } catch (Exception $e) {
+            $this->log("Unexpected error during Microsoft SSO login: " . $e->getMessage());
+            // Log to SystemLogger if available
+            if ($this->systemLogger) {
+                $this->systemLogger->logLoginAttempt($email, false, null, 'Unexpected error during SSO');
             }
             return [
                 'success' => false,
@@ -383,7 +465,7 @@ class Auth {
      * Create user session after successful authentication
      * 
      * @param array $user User data from database
-     * @param string $authMethod Authentication method (currently only 'password')
+     * @param string $authMethod Authentication method (password, microsoft)
      * @return array Result array
      */
     private function createUserSession(array $user, string $authMethod): array {
@@ -409,147 +491,6 @@ class Auth {
             'success' => true,
             'message' => 'Login erfolgreich!'
         ];
-    }
-    
-    /**
-     * Generate a new TOTP secret for a user
-     * 
-     * @return string Base32-encoded secret
-     */
-    public function generateTotpSecret(): string {
-        return $this->googleAuth->generateSecret();
-    }
-    
-    /**
-     * Verify a TOTP code against a secret
-     * 
-     * @param string $secret Base32-encoded TOTP secret
-     * @param string $code 6-digit code from authenticator app
-     * @return bool True if code is valid
-     */
-    private function verifyTotpCode(string $secret, string $code): bool {
-        try {
-            // Allow 1 time period drift (30 seconds) for clock skew
-            return $this->googleAuth->checkCode($secret, $code, 1);
-        } catch (Exception $e) {
-            $this->log("Error verifying TOTP code: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Enable TOTP 2FA for a user
-     * 
-     * @param int $userId User ID
-     * @param string $secret TOTP secret to store
-     * @param string $verificationCode Code to verify setup
-     * @return array Result with 'success' (bool) and 'message' (string)
-     */
-    public function enableTotp(int $userId, string $secret, string $verificationCode): array {
-        try {
-            // Verify the code before enabling
-            if (!$this->verifyTotpCode($secret, $verificationCode)) {
-                return [
-                    'success' => false,
-                    'message' => 'Ungültiger Verifikationscode. Bitte versuchen Sie es erneut.'
-                ];
-            }
-            
-            // Enable TOTP for the user
-            $stmt = $this->pdo->prepare("
-                UPDATE users 
-                SET totp_secret = ?, totp_enabled = 1, totp_verified_at = NOW() 
-                WHERE id = ?
-            ");
-            $stmt->execute([$secret, $userId]);
-            
-            $this->log("TOTP 2FA enabled for user ID: {$userId}");
-            
-            return [
-                'success' => true,
-                'message' => 'Zwei-Faktor-Authentifizierung erfolgreich aktiviert.'
-            ];
-        } catch (PDOException $e) {
-            $this->log("Database error enabling TOTP: " . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => 'Ein Datenbankfehler ist aufgetreten.'
-            ];
-        }
-    }
-    
-    /**
-     * Disable TOTP 2FA for a user
-     * 
-     * @param int $userId User ID
-     * @param string $password User's password for verification
-     * @return array Result with 'success' (bool) and 'message' (string)
-     */
-    public function disableTotp(int $userId, string $password): array {
-        try {
-            // Verify password before disabling
-            $stmt = $this->pdo->prepare("SELECT password FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$user || !password_verify($password, $user['password'])) {
-                return [
-                    'success' => false,
-                    'message' => 'Ungültiges Passwort.'
-                ];
-            }
-            
-            // Disable TOTP for the user
-            $stmt = $this->pdo->prepare("
-                UPDATE users 
-                SET totp_secret = NULL, totp_enabled = 0, totp_verified_at = NULL 
-                WHERE id = ?
-            ");
-            $stmt->execute([$userId]);
-            
-            $this->log("TOTP 2FA disabled for user ID: {$userId}");
-            
-            return [
-                'success' => true,
-                'message' => 'Zwei-Faktor-Authentifizierung erfolgreich deaktiviert.'
-            ];
-        } catch (PDOException $e) {
-            $this->log("Database error disabling TOTP: " . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => 'Ein Datenbankfehler ist aufgetreten.'
-            ];
-        }
-    }
-    
-    /**
-     * Get QR code URL for TOTP setup
-     * 
-     * @param string $email User's email
-     * @param string $secret TOTP secret
-     * @param string $issuer Application name (default: IBC-Intra)
-     * @return string QR code URL
-     */
-    public function getTotpQrCodeUrl(string $email, string $secret, string $issuer = 'IBC-Intra'): string {
-        return $this->googleAuth->getURL($email, $issuer, $secret);
-    }
-    
-    /**
-     * Check if user has TOTP enabled
-     * 
-     * @param int $userId User ID
-     * @return bool True if TOTP is enabled
-     */
-    public function isTotpEnabled(int $userId): bool {
-        try {
-            $stmt = $this->pdo->prepare("SELECT totp_enabled FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
-            $result = $stmt->fetchColumn();
-            return (bool)$result;
-        } catch (PDOException $e) {
-            $this->log("Error checking TOTP status: " . $e->getMessage());
-            return false;
-        }
     }
     
     /**
@@ -701,7 +642,7 @@ class Auth {
     /**
      * Get current authentication method
      * 
-     * @return string|null Authentication method ('password') or null if not logged in
+     * @return string|null Authentication method ('password' or 'microsoft') or null if not logged in
      */
     public function getAuthMethod(): ?string {
         return $_SESSION['auth_method'] ?? null;
@@ -1594,7 +1535,7 @@ class Auth {
                 $this->log("Password update failed: No password set for user: {$userId}");
                 return [
                     'success' => false,
-                    'message' => 'Kein Passwort gesetzt. Bitte kontaktieren Sie den Administrator.'
+                    'message' => 'Kein Passwort gesetzt. Bitte verwenden Sie Microsoft SSO zur Anmeldung.'
                 ];
             }
             
