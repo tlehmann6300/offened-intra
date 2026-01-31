@@ -208,12 +208,12 @@ class Auth {
      * This is the main entry point for password-based authentication (Alumni)
      * For Microsoft SSO (Vorstand), use loginWithMicrosoft() method instead
      * 
-     * @param string $username Username or email
+     * @param string $email Email address (previously accepted username, now standardized to email)
      * @param string $password Password
      * @param string|null $recaptchaResponse reCAPTCHA response token (optional for now)
      * @return array Result array with 'success' (bool) and 'message' (string)
      */
-    public function login(string $username, string $password, ?string $recaptchaResponse = null): array {
+    public function login(string $email, string $password, ?string $recaptchaResponse = null): array {
         // Delegate to password-based authentication method
         return $this->loginWithPassword($username, $password, $recaptchaResponse);
     }
@@ -361,7 +361,7 @@ class Auth {
      * @param string $email Email from Microsoft account
      * @param string $firstname First name from Microsoft account
      * @param string $lastname Last name from Microsoft account
-     * @param string $microsoftId Microsoft user ID (sub or oid from token)
+     * @param string $microsoftId Microsoft user ID (sub or oid from token) - Reserved for future use (e.g., account linking, audit trails)
      * @return array Result array with 'success' (bool), 'message' (string), and optionally 'user' (array)
      */
     public function loginWithMicrosoft(string $email, string $firstname, string $lastname, string $microsoftId): array {
