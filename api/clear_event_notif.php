@@ -15,9 +15,13 @@ require_once BASE_PATH . '/src/NotificationService.php';
 header('Content-Type: application/json');
 
 // Initialize database and auth
-$pdo = DatabaseManager::getConnection();
-$systemLogger = new SystemLogger($pdo);
-$auth = new Auth($pdo, $systemLogger);
+// Two-database architecture:
+// - Auth uses $userPdo (User Database: dbs15253086)
+// - SystemLogger uses $contentPdo (Content Database: dbs15161271)
+$userPdo = DatabaseManager::getUserConnection();
+$contentPdo = DatabaseManager::getContentConnection();
+$systemLogger = new SystemLogger($contentPdo);
+$auth = new Auth($userPdo, $systemLogger);
 
 // Check if user is logged in
 if (!$auth->isLoggedIn() || !isset($_SESSION['user_id'])) {
@@ -41,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $userId = (int)$_SESSION['user_id'];
-    $notificationService = new NotificationService($pdo);
+    $notificationService = new NotificationService($contentPdo);
     
     // Clear the helper update notification
     $result = $notificationService->markHelperUpdatesAsRead($userId);

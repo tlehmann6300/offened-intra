@@ -305,5 +305,11 @@ class DatabaseManager {
     }
 }
 
-// Create global $pdo variable for backward compatibility
+// Create global PDO instances for the two-database model
+// $userPdo - User Database (Benutzer, Alumni-Profile, Authentication)
+// $contentPdo - Content Database (Projekte, Inventar, Events, News, System Logs)
+$userPdo = DatabaseManager::getUserConnection();
+$contentPdo = DatabaseManager::getContentConnection();
+
+// Create global $pdo variable for backward compatibility (points to Content DB)
 $pdo = DatabaseManager::getConnection();

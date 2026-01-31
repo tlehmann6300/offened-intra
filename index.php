@@ -240,9 +240,12 @@ if (!file_exists($systemLoggerPath)) {
 require_once $systemLoggerPath;
 
 // Initialize Auth system with SystemLogger
+// Note: Two-database architecture:
+// - Auth uses $userPdo (User Database: dbs15253086)
+// - SystemLogger uses $contentPdo (Content Database: dbs15161271)
 try {
-    $systemLogger = new SystemLogger($pdo);
-    $auth = new Auth($pdo, $systemLogger);
+    $systemLogger = new SystemLogger($contentPdo);
+    $auth = new Auth($userPdo, $systemLogger);
 } catch (Exception $e) {
     error_log("CRITICAL: Failed to initialize Auth system - " . $e->getMessage());
     http_response_code(503);
