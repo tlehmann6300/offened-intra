@@ -390,6 +390,15 @@ class Auth {
     }
     
     /**
+     * Get current user email
+     * 
+     * @return string|null User email or null if not logged in
+     */
+    public function getUserEmail(): ?string {
+        return $_SESSION['email'] ?? null;
+    }
+    
+    /**
      * Get current user full name
      * 
      * @return string|null User full name or null if not logged in
@@ -1190,6 +1199,341 @@ class Auth {
                 'success' => false,
                 'message' => 'Fehler beim Löschen des Kontos'
             ];
+        }
+    }
+    
+    /**
+     * Validate password strength
+     * Requirements: Min 12 chars, uppercase, lowercase, number, special char
+     * 
+     * @param string $password Password to validate
+     * @return array Result with 'valid' (bool) and 'message' (string)
+     */
+    public function validatePasswordStrength(string $password): array {
+        // Check minimum length
+        if (strlen($password) < 12) {
+            return [
+                'valid' => false,
+                'message' => 'Das Passwort muss mindestens 12 Zeichen lang sein.'
+            ];
+        }
+        
+        // Check for uppercase letter
+        if (!preg_match('/[A-Z]/', $password)) {
+            return [
+                'valid' => false,
+                'message' => 'Das Passwort muss mindestens einen Großbuchstaben enthalten.'
+            ];
+        }
+        
+        // Check for lowercase letter
+        if (!preg_match('/[a-z]/', $password)) {
+            return [
+                'valid' => false,
+                'message' => 'Das Passwort muss mindestens einen Kleinbuchstaben enthalten.'
+            ];
+        }
+        
+        // Check for number
+        if (!preg_match('/[0-9]/', $password)) {
+            return [
+                'valid' => false,
+                'message' => 'Das Passwort muss mindestens eine Zahl enthalten.'
+            ];
+        }
+        
+        // Check for special character
+        if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+            return [
+                'valid' => false,
+                'message' => 'Das Passwort muss mindestens ein Sonderzeichen enthalten.'
+            ];
+        }
+        
+        return [
+            'valid' => true,
+            'message' => 'Passwort erfüllt alle Anforderungen.'
+        ];
+    }
+    
+    /**
+     * Update user password
+     * Requires current password for verification
+     * 
+     * @param int $userId User ID
+     * @param string $currentPassword Current password for verification
+     * @param string $newPassword New password
+     * @return array Result with 'success' (bool) and 'message' (string)
+     */
+    public function updatePassword(int $userId, string $currentPassword, string $newPassword): array {
+        try {
+            // Get user from database
+            $stmt = $this->pdo->prepare("SELECT id, email, password FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user) {
+                $this->log("Password update failed: User not found: {$userId}");
+                return [
+                    'success' => false,
+                    'message' => 'Benutzer nicht gefunden.'
+                ];
+            }
+            
+            // Verify current password
+            if (empty($user['password']) || !password_verify($currentPassword, $user['password'])) {
+                $this->log("Password update failed: Invalid current password for user: {$userId}");
+                return [
+                    'success' => false,
+                    'message' => 'Das aktuelle Passwort ist nicht korrekt.'
+                ];
+            }
+            
+            // Validate new password strength
+            $validation = $this->validatePasswordStrength($newPassword);
+            if (!$validation['valid']) {
+                $this->log("Password update failed: Weak password for user: {$userId}");
+                return [
+                    'success' => false,
+                    'message' => $validation['message']
+                ];
+            }
+            
+            // Check that new password is different from current
+            if (password_verify($newPassword, $user['password'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Das neue Passwort muss sich vom aktuellen Passwort unterscheiden.'
+                ];
+            }
+            
+            // Hash new password
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            // Update password in database
+            $updateStmt = $this->pdo->prepare("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?");
+            $result = $updateStmt->execute([$hashedPassword, $userId]);
+            
+            if ($result) {
+                $this->log("Password updated successfully for user ID: {$userId}");
+                
+                // Log to SystemLogger if available
+                if ($this->systemLogger) {
+                    $this->systemLogger->log('security', 'password_changed', $userId, "User changed their password");
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'Ihr Passwort wurde erfolgreich geändert.'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Fehler beim Aktualisieren des Passworts.'
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during password update: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten.'
+            ];
+        }
+    }
+    
+    /**
+     * Update user email address
+     * Sends confirmation email to new address
+     * 
+     * @param int $userId User ID
+     * @param string $newEmail New email address
+     * @param string $currentPassword Password for verification
+     * @return array Result with 'success' (bool) and 'message' (string)
+     */
+    public function updateEmail(int $userId, string $newEmail, string $currentPassword): array {
+        try {
+            // Validate and sanitize email
+            $newEmail = trim($newEmail);
+            
+            if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+                return [
+                    'success' => false,
+                    'message' => 'Ungültige E-Mail-Adresse.'
+                ];
+            }
+            
+            // Get user from database
+            $stmt = $this->pdo->prepare("SELECT id, email, password, firstname, lastname FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user) {
+                $this->log("Email update failed: User not found: {$userId}");
+                return [
+                    'success' => false,
+                    'message' => 'Benutzer nicht gefunden.'
+                ];
+            }
+            
+            // Verify current password
+            if (empty($user['password']) || !password_verify($currentPassword, $user['password'])) {
+                $this->log("Email update failed: Invalid password for user: {$userId}");
+                return [
+                    'success' => false,
+                    'message' => 'Das Passwort ist nicht korrekt.'
+                ];
+            }
+            
+            // Check if email is different from current
+            if ($newEmail === $user['email']) {
+                return [
+                    'success' => false,
+                    'message' => 'Die neue E-Mail-Adresse ist identisch mit der aktuellen.'
+                ];
+            }
+            
+            // Check if email already exists
+            $checkStmt = $this->pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $checkStmt->execute([$newEmail, $userId]);
+            if ($checkStmt->fetch()) {
+                $this->log("Email update failed: Email already exists: {$newEmail}");
+                return [
+                    'success' => false,
+                    'message' => 'Diese E-Mail-Adresse wird bereits verwendet.'
+                ];
+            }
+            
+            // Update email in database
+            $updateStmt = $this->pdo->prepare("UPDATE users SET email = ?, updated_at = NOW() WHERE id = ?");
+            $result = $updateStmt->execute([$newEmail, $userId]);
+            
+            if ($result) {
+                $this->log("Email updated successfully for user ID: {$userId} from {$user['email']} to {$newEmail}");
+                
+                // Log to SystemLogger if available
+                if ($this->systemLogger) {
+                    $this->systemLogger->log('security', 'email_changed', $userId, "Email changed from {$user['email']} to {$newEmail}");
+                }
+                
+                // Send confirmation email
+                $emailSent = $this->sendEmailChangeConfirmation($newEmail, $user['firstname'], $user['lastname']);
+                
+                if (!$emailSent) {
+                    $this->log("Warning: Confirmation email failed to send to {$newEmail}");
+                }
+                
+                return [
+                    'success' => true,
+                    'message' => 'Ihre E-Mail-Adresse wurde erfolgreich geändert. Eine Bestätigungsmail wurde an die neue Adresse gesendet.'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Fehler beim Aktualisieren der E-Mail-Adresse.'
+            ];
+            
+        } catch (PDOException $e) {
+            $this->log("Database error during email update: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Ein Datenbankfehler ist aufgetreten.'
+            ];
+        }
+    }
+    
+    /**
+     * Send email change confirmation
+     * 
+     * @param string $email New email address
+     * @param string $firstname User's first name
+     * @param string $lastname User's last name
+     * @return bool Success status
+     */
+    private function sendEmailChangeConfirmation(string $email, string $firstname, string $lastname): bool {
+        try {
+            // Check if PHPMailer is available
+            if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+                $this->log("Warning: PHPMailer not available for email confirmation");
+                return false;
+            }
+            
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host       = defined('SMTP_HOST') ? SMTP_HOST : '';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = defined('SMTP_USER') ? SMTP_USER : '';
+            $mail->Password   = defined('SMTP_PASS') ? SMTP_PASS : '';
+            $mail->SMTPSecure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
+            $mail->Port       = defined('SMTP_PORT') ? SMTP_PORT : 587;
+            $mail->CharSet    = 'UTF-8';
+            
+            // Recipients
+            $fromEmail = defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'noreply@ibc.com';
+            $fromName = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'IBC Intranet';
+            $mail->setFrom($fromEmail, $fromName);
+            $mail->addAddress($email, "{$firstname} {$lastname}");
+            
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = 'E-Mail-Adresse erfolgreich geändert - IBC Intranet';
+            
+            $htmlBody = "
+            <!DOCTYPE html>
+            <html lang='de'>
+            <head>
+                <meta charset='UTF-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .button { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                    .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>IBC Intranet</h1>
+                    </div>
+                    <div class='content'>
+                        <h2>E-Mail-Adresse erfolgreich geändert</h2>
+                        <p>Hallo {$firstname} {$lastname},</p>
+                        <p>Ihre E-Mail-Adresse für das IBC Intranet wurde erfolgreich geändert.</p>
+                        <p><strong>Neue E-Mail-Adresse:</strong> {$email}</p>
+                        <p>Falls Sie diese Änderung nicht vorgenommen haben, kontaktieren Sie bitte umgehend den Administrator.</p>
+                        <p>Mit freundlichen Grüßen,<br>Ihr IBC Team</p>
+                    </div>
+                    <div class='footer'>
+                        <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese Nachricht.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            ";
+            
+            $mail->Body = $htmlBody;
+            
+            // Generate plain text alternative
+            $plainText = "IBC Intranet\n\nE-Mail-Adresse erfolgreich geändert\n\nHallo {$firstname} {$lastname},\n\n";
+            $plainText .= "Ihre E-Mail-Adresse für das IBC Intranet wurde erfolgreich geändert.\n\n";
+            $plainText .= "Neue E-Mail-Adresse: {$email}\n\n";
+            $plainText .= "Falls Sie diese Änderung nicht vorgenommen haben, kontaktieren Sie bitte umgehend den Administrator.\n\n";
+            $plainText .= "Mit freundlichen Grüßen,\nIhr IBC Team\n\n";
+            $plainText .= "Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese Nachricht.";
+            $mail->AltBody = $plainText;
+            
+            $mail->send();
+            return true;
+            
+        } catch (\Exception $e) {
+            $this->log("Email confirmation send failed to {$email}: " . $e->getMessage());
+            return false;
         }
     }
 }
