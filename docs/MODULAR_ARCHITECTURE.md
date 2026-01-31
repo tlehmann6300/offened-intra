@@ -159,7 +159,7 @@ $modulePermissions = [
 ### 4. Fehlerbehandlung
 - Detaillierte Fehlerprotokollierung (error_log)
 - Benutzerfreundliche Fehlermeldungen
-- Kein Exposure sensibler Systeminformationen
+- Keine Preisgabe sensibler Systeminformationen
 
 ## Best Practices für Entwickler
 

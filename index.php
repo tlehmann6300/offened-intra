@@ -288,6 +288,10 @@ try {
 // Get requested page from query parameter
 $page = $_GET['page'] ?? 'home';
 
+// Sanitize page parameter to prevent log injection and path traversal
+// Only allow alphanumeric characters, underscores, and hyphens
+$page = preg_replace('/[^a-zA-Z0-9_-]/', '', $page);
+
 // Handle language switching
 if (isset($_GET['lang']) && in_array($_GET['lang'], ['de', 'en'], true)) {
     $_SESSION['lang'] = $_GET['lang'];
