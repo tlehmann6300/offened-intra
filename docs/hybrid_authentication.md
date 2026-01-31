@@ -87,7 +87,94 @@ Die `users` Tabelle enthält:
 
 ## API Integration (Beispiel)
 
-Erstellen eines Alumni-Kontos über API-Endpunkt:
+### API Endpoint: `/api/create_alumni_account.php`
+
+Ein vollständig funktionsfähiger API-Endpunkt ist unter `api/create_alumni_account.php` verfügbar.
+
+**Methode:** POST
+
+**Erforderliche Parameter:**
+- `csrf_token` - CSRF-Schutz-Token aus der Session
+- `email` - E-Mail-Adresse des Alumni
+- `firstname` - Vorname
+- `lastname` - Nachname  
+- `password` - Initiales Passwort (mind. 8 Zeichen)
+
+**Antwort-Format:** JSON
+```json
+{
+  "success": true|false,
+  "message": "Erfolgs- oder Fehlermeldung",
+  "user_id": 123  // nur bei Erfolg
+}
+```
+
+**HTTP Status Codes:**
+- `201 Created` - Konto erfolgreich erstellt
+- `400 Bad Request` - Ungültige Eingabe
+- `401 Unauthorized` - Nicht angemeldet
+- `403 Forbidden` - Keine Berechtigung oder ungültiger CSRF-Token
+- `405 Method Not Allowed` - Falsche HTTP-Methode
+- `500 Internal Server Error` - Serverfehler
+
+### JavaScript Beispiel
+
+```javascript
+async function createAlumniAccount(email, firstname, lastname, password) {
+    const formData = new URLSearchParams({
+        csrf_token: document.querySelector('[name="csrf_token"]').value,
+        email: email,
+        firstname: firstname,
+        lastname: lastname,
+        password: password
+    });
+    
+    try {
+        const response = await fetch('/api/create_alumni_account.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('Alumni-Konto erstellt:', data.user_id);
+            return data;
+        } else {
+            console.error('Fehler:', data.message);
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Netzwerkfehler:', error);
+        throw error;
+    }
+}
+
+// Verwendung
+createAlumniAccount(
+    'alumni@example.com',
+    'Max',
+    'Mustermann',
+    'SecurePassword123!'
+)
+.then(result => {
+    alert('Konto erfolgreich erstellt!');
+})
+.catch(error => {
+    alert('Fehler: ' + error.message);
+});
+```
+
+### HTML Formular Beispiel
+
+Ein vollständiges HTML-Formular-Beispiel ist unter `docs/create_alumni_form_example.html` verfügbar.
+
+### PHP Beispiel (Direkte Verwendung)
+
+Erstellen eines Alumni-Kontos direkt in PHP:
 
 ```php
 // api/create_alumni.php
