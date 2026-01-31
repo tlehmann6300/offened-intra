@@ -1,6 +1,6 @@
 <?php
 /**
- * Login Page - Microsoft SSO as Primary Authentication
+ * Login Page - Internal Authentication
  * 
  * This template uses exclusively the design system from theme.css
  * with a centered glass-card layout.
@@ -9,10 +9,20 @@
 // Handle error and success messages from URL parameters
 $error = '';
 $success = '';
+$requires2fa = false;
+$message2fa = '';
 
 // Check for timeout parameter
 if (isset($_GET['timeout']) && $_GET['timeout'] === '1') {
     $error = 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.';
+}
+
+// Check for 2FA requirement
+if (isset($_GET['requires_2fa']) && $_GET['requires_2fa'] === '1') {
+    $requires2fa = true;
+    if (isset($_GET['message'])) {
+        $message2fa = substr($_GET['message'], 0, 500);
+    }
 }
 
 // Check for error parameter - sanitize input
@@ -54,34 +64,30 @@ if (isset($_GET['success']) && !empty($_GET['success'])) {
                             <strong>Erfolg:</strong> <?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?>
                         </div>
                     <?php endif; ?>
+                    
+                    <?php if ($requires2fa && $message2fa): ?>
+                        <div class="alert alert-info" role="alert">
+                            <strong>Info:</strong> <?= htmlspecialchars($message2fa, ENT_QUOTES, 'UTF-8') ?>
+                        </div>
+                    <?php endif; ?>
 
-                    <div class="text-center mb-4">
-                        <p class="lead mb-4">Melden Sie sich mit Ihrem Microsoft-Konto an</p>
-                        
-                        <a href="index.php?page=microsoft_login" class="btn btn-microsoft w-100 d-flex align-items-center justify-content-center">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="me-2" aria-hidden="true">
-                                <rect x="0" y="0" width="9.5" height="9.5" fill="#f25022"/>
-                                <rect x="0" y="10.5" width="9.5" height="9.5" fill="#00a4ef"/>
-                                <rect x="10.5" y="0" width="9.5" height="9.5" fill="#7fba00"/>
-                                <rect x="10.5" y="10.5" width="9.5" height="9.5" fill="#ffb900"/>
-                            </svg>
-                            Mit Microsoft anmelden
-                        </a>
-                    </div>
-                    
-                    <div class="divider">oder</div>
-                    
                     <div class="mb-4">
-                        <p class="text-center mb-3"><strong>Admin-Login</strong></p>
-                        <form method="POST" action="index.php?page=admin_login">
+                        <p class="text-center mb-3"><strong>Login</strong></p>
+                        <form method="POST" action="index.php?page=admin_login" id="loginForm">
                             <div class="form-floating mb-3">
-                                <input type="text" class="form-control" id="username" name="username" placeholder="Benutzername" required>
-                                <label for="username">Benutzername</label>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="E-Mail" required>
+                                <label for="email">E-Mail-Adresse</label>
                             </div>
                             
                             <div class="form-floating mb-3">
                                 <input type="password" class="form-control" id="password" name="password" placeholder="Passwort" required>
                                 <label for="password">Passwort</label>
+                            </div>
+                            
+                            <div class="form-floating mb-3" id="totpCodeField" style="<?= $requires2fa ? '' : 'display: none;' ?>">
+                                <input type="text" class="form-control" id="totp_code" name="totp_code" placeholder="2FA Code" maxlength="6" pattern="\d{6}" <?= $requires2fa ? 'required' : '' ?>>
+                                <label for="totp_code">6-stelliger Authentifizierungscode</label>
+                                <small class="text-muted">Geben Sie den Code aus Ihrer Authenticator-App ein</small>
                             </div>
                             
                             <button type="submit" class="btn btn-login w-100">Anmelden</button>
@@ -90,7 +96,7 @@ if (isset($_GET['success']) && !empty($_GET['success'])) {
                     
                     <div class="text-center mt-4">
                         <small class="text-muted">
-                            Sicherer Single Sign-On über Microsoft Entra ID
+                            Sicherer Login mit Zwei-Faktor-Authentifizierung
                         </small>
                     </div>
                 </div>

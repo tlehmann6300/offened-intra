@@ -314,12 +314,18 @@ if ($page === 'logout') {
 
 // Handle admin login form submission
 if ($page === 'admin_login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
+    $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
-    $result = $auth->login($username, $password);
+    $totpCode = $_POST['totp_code'] ?? null;
+    
+    $result = $auth->login($email, $password, $totpCode);
     
     if ($result['success']) {
         header('Location: index.php?page=home');
+        exit;
+    } elseif (isset($result['requires_2fa']) && $result['requires_2fa']) {
+        // Password correct but needs 2FA code
+        header('Location: index.php?page=login&requires_2fa=1&message=' . urlencode($result['message']));
         exit;
     } else {
         header('Location: index.php?page=login&error=' . urlencode($result['message']));
@@ -332,9 +338,7 @@ $publicPages = [
     'login',
     'landing',
     'forgot_password', 
-    'reset_password', 
-    'microsoft_login',
-    'microsoft_callback', 
+    'reset_password',
     'impressum', 
     'datenschutz'
 ];
@@ -516,7 +520,7 @@ try {
     $content = ob_get_clean();
     
     // Load header and footer for all pages except special cases
-    $pagesWithoutLayout = ['login', 'microsoft_callback', 'landing'];
+    $pagesWithoutLayout = ['login', 'landing'];
     
     if (!in_array($page, $pagesWithoutLayout, true)) {
         // Include header
