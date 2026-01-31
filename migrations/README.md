@@ -115,10 +115,19 @@ To test query performance improvement:
 
 ```sql
 -- Test with EXPLAIN to see index usage
+-- Note: Leading wildcards (LIKE '%term%') typically cannot use indexes effectively
+-- The global search API uses leading wildcards for full substring matching
+-- However, indexes still help with overall query planning and sorting
 EXPLAIN SELECT * FROM inventory WHERE name LIKE '%test%';
 EXPLAIN SELECT * FROM users WHERE firstname LIKE '%john%';
 EXPLAIN SELECT * FROM users WHERE lastname LIKE '%smith%';
 EXPLAIN SELECT * FROM news WHERE title LIKE '%announcement%';
+
+-- For queries with prefix matching (no leading wildcard), indexes are used more effectively:
+EXPLAIN SELECT * FROM inventory WHERE name LIKE 'test%';
+EXPLAIN SELECT * FROM users WHERE firstname LIKE 'john%';
+EXPLAIN SELECT * FROM users WHERE lastname LIKE 'smith%';
+EXPLAIN SELECT * FROM news WHERE title LIKE 'announcement%';
 ```
 
-The EXPLAIN output should show "Using index" or reference the new index names in the "key" column.
+The EXPLAIN output should show "Using index" or reference the new index names in the "key" column for prefix-based queries.

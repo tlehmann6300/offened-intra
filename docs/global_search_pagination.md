@@ -6,7 +6,7 @@ The Global Search API (`api/global_search.php`) has been optimized for better pe
 ## Performance Optimizations
 
 ### 1. UNION ALL instead of UNION
-All UNION queries have been replaced with UNION ALL to avoid the overhead of duplicate removal, since search results from different tables cannot be duplicates.
+The API uses UNION ALL for combining results from different tables, which avoids the overhead of duplicate removal. Since search results from different table types (inventory, users, news, events, projects) cannot be duplicates, UNION ALL is the optimal choice.
 
 ### 2. Database Indexes
 A migration script (`migrations/002_add_search_indexes.sql`) has been created to add indexes on frequently searched columns:
@@ -113,10 +113,17 @@ SHOW INDEX FROM news WHERE Key_name = 'idx_news_title';
 Test query performance with EXPLAIN:
 
 ```sql
--- These queries should now use indexes
+-- Note: Leading wildcards (LIKE '%term%') may not use indexes effectively
+-- The global search API uses leading wildcards for substring matching
+-- For best index usage where possible, use prefix matching (e.g., 'term%')
 EXPLAIN SELECT * FROM inventory WHERE name LIKE '%laptop%';
 EXPLAIN SELECT * FROM users WHERE firstname LIKE '%john%';
 EXPLAIN SELECT * FROM news WHERE title LIKE '%announcement%';
+
+-- Examples that can use indexes more effectively (prefix matching):
+EXPLAIN SELECT * FROM inventory WHERE name LIKE 'laptop%';
+EXPLAIN SELECT * FROM users WHERE firstname LIKE 'john%';
+EXPLAIN SELECT * FROM news WHERE title LIKE 'announcement%';
 ```
 
 ## Expected Performance Improvements
