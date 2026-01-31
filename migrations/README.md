@@ -40,6 +40,31 @@ This directory contains SQL migration scripts for database schema changes and op
   4. Admin/Vorstand validates the profile
   5. Profile becomes visible in directory after validation
 
+### 006_add_invitations_table.sql
+- **Purpose**: Create invitations table for token-based registration system
+- **Columns Created**:
+  - `id INT(11) AUTO_INCREMENT PRIMARY KEY`
+  - `email VARCHAR(255) NOT NULL` - Email address of invited user
+  - `token VARCHAR(64) NOT NULL UNIQUE` - Cryptographic invitation token
+  - `role VARCHAR(50) NOT NULL DEFAULT 'alumni'` - Role to assign after registration
+  - `created_by INT(11) NOT NULL` - User ID of admin who created invitation
+  - `created_at TIMESTAMP NOT NULL` - When invitation was created
+  - `expires_at TIMESTAMP NOT NULL` - When invitation expires
+  - `accepted_at TIMESTAMP NULL` - When invitation was accepted (NULL = pending)
+- **Indexes Created**:
+  - `unique_token` on `token` (unique)
+  - `idx_email` on `email`
+  - `idx_created_by` on `created_by`
+  - `idx_expires_at` on `expires_at`
+  - `idx_accepted_at` on `accepted_at`
+  - `idx_pending_invitations` on `(email, accepted_at, expires_at)`
+- **Use Case**: Implement secure token-based invitation system where:
+  1. Admins/Vorstand enter email addresses in user management
+  2. System generates cryptographic tokens and sends invitation emails via IONOS SMTP
+  3. Users can only register via the unique invitation link
+  4. Tokens expire after configured time (default: 48 hours)
+  5. After registration, tokens are marked as accepted and cannot be reused
+
 ## How to Run
 
 ### Option 1: Using MySQL Command Line

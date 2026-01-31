@@ -281,6 +281,9 @@ try {
         </div>
     </div>
 
+    <!-- Invitation Management Section -->
+    <?php include BASE_PATH . '/templates/components/invitation_management.php'; ?>
+
     <!-- Letzte Aktivitäten Section -->
     <div class="row mb-5">
         <div class="col-12">

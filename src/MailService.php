@@ -680,4 +680,174 @@ class MailService {
             error_log("Failed to write to mail log file: {$this->logFile}. Original message: {$message}");
         }
     }
+    
+    /**
+     * Send invitation email with registration link
+     * 
+     * @param string $to Recipient email address
+     * @param string $token Invitation token
+     * @param string $role Role that will be assigned (for display)
+     * @param string $invitedBy Name of admin who sent the invitation
+     * @param string $expiresAt Expiration date/time
+     * @return bool True on success, false on failure
+     */
+    public function sendInvitationEmail(
+        string $to,
+        string $token,
+        string $role = 'alumni',
+        string $invitedBy = '',
+        string $expiresAt = ''
+    ): bool {
+        try {
+            // Build registration link
+            $registrationUrl = (defined('SITE_URL') ? SITE_URL : 'https://ibc-intra.de') . '/index.php?page=register&token=' . urlencode($token);
+            
+            // Format expiration time
+            $expiresFormatted = '';
+            if (!empty($expiresAt)) {
+                $expiresFormatted = date('d.m.Y H:i', strtotime($expiresAt));
+            }
+            
+            // Translate role to German
+            $roleNames = [
+                'alumni' => 'Alumni',
+                'mitglied' => 'Mitglied',
+                'ressortleiter' => 'Ressortleiter',
+                'vorstand' => 'Vorstand',
+                'admin' => 'Administrator'
+            ];
+            $roleDisplay = $roleNames[$role] ?? $role;
+            
+            // Build subject
+            $subject = 'Einladung zur Registrierung - IBC Intranet';
+            
+            // Build HTML email body
+            $htmlBody = '
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Willkommen beim IBC Intranet</h1>
+        </div>
+        <div class="content">
+            <p>Hallo,</p>
+            
+            <p>Sie wurden eingeladen, sich beim IBC Intranet zu registrieren' . ($invitedBy ? ' von <strong>' . htmlspecialchars($invitedBy, ENT_QUOTES, 'UTF-8') . '</strong>' : '') . '.</p>
+            
+            <div class="info-box">
+                <strong>Ihre Rolle:</strong> ' . htmlspecialchars($roleDisplay, ENT_QUOTES, 'UTF-8') . '<br>
+                ' . ($expiresFormatted ? '<strong>Gültig bis:</strong> ' . htmlspecialchars($expiresFormatted, ENT_QUOTES, 'UTF-8') : '') . '
+            </div>
+            
+            <p>Um Ihre Registrierung abzuschließen, klicken Sie bitte auf den folgenden Link:</p>
+            
+            <div style="text-align: center;">
+                <a href="' . htmlspecialchars($registrationUrl, ENT_QUOTES, 'UTF-8') . '" class="button">Jetzt registrieren</a>
+            </div>
+            
+            <p style="margin-top: 20px; font-size: 14px; color: #666;">
+                Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link in Ihren Browser:<br>
+                <a href="' . htmlspecialchars($registrationUrl, ENT_QUOTES, 'UTF-8') . '" style="color: #667eea; word-break: break-all;">' . htmlspecialchars($registrationUrl, ENT_QUOTES, 'UTF-8') . '</a>
+            </p>
+            
+            <p style="margin-top: 30px;">
+                <strong>Hinweis:</strong> Dieser Link ist nur einmalig verwendbar' . ($expiresFormatted ? ' und gültig bis zum ' . htmlspecialchars($expiresFormatted, ENT_QUOTES, 'UTF-8') : '') . '.
+            </p>
+        </div>
+        <div class="footer">
+            <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese Nachricht.</p>
+            <p>&copy; ' . date('Y') . ' IBC Intranet. Alle Rechte vorbehalten.</p>
+        </div>
+    </div>
+</body>
+</html>';
+            
+            // Build plain text alternative
+            $plainText = "Willkommen beim IBC Intranet\n\n";
+            $plainText .= "Sie wurden eingeladen, sich beim IBC Intranet zu registrieren" . ($invitedBy ? " von {$invitedBy}" : "") . ".\n\n";
+            $plainText .= "Ihre Rolle: {$roleDisplay}\n";
+            if ($expiresFormatted) {
+                $plainText .= "Gültig bis: {$expiresFormatted}\n";
+            }
+            $plainText .= "\nUm Ihre Registrierung abzuschließen, öffnen Sie bitte folgenden Link in Ihrem Browser:\n\n";
+            $plainText .= "{$registrationUrl}\n\n";
+            $plainText .= "Hinweis: Dieser Link ist nur einmalig verwendbar" . ($expiresFormatted ? " und gültig bis zum {$expiresFormatted}" : "") . ".\n\n";
+            $plainText .= "Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese Nachricht.\n\n";
+            $plainText .= "© " . date('Y') . " IBC Intranet. Alle Rechte vorbehalten.";
+            
+            // Send email
+            $result = $this->sendEmail($to, $subject, $htmlBody, '', $plainText);
+            
+            if ($result) {
+                $this->log("Invitation email sent successfully to: {$to}");
+            } else {
+                $this->log("Failed to send invitation email to: {$to}");
+            }
+            
+            return $result;
+            
+        } catch (Exception $e) {
+            $this->log("Error sending invitation email to {$to}: " . $e->getMessage());
+            return false;
+        }
+    }
 }
