@@ -115,7 +115,7 @@ function createTestItem(PDO $pdo): int {
     ");
     
     $stmt->execute([
-        'Test Item - ' . date('Y-m-d H:i:s'),
+        'Test Item - ' . uniqid('test_', true),
         'Test item for concurrent adjustment testing',
         0,
         'sonstige',
