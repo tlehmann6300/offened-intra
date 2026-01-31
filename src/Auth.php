@@ -1280,8 +1280,17 @@ class Auth {
                 ];
             }
             
+            // Check if user has a password set
+            if (empty($user['password'])) {
+                $this->log("Password update failed: No password set for user: {$userId}");
+                return [
+                    'success' => false,
+                    'message' => 'Kein Passwort gesetzt. Bitte verwenden Sie Microsoft SSO zur Anmeldung.'
+                ];
+            }
+            
             // Verify current password
-            if (empty($user['password']) || !password_verify($currentPassword, $user['password'])) {
+            if (!password_verify($currentPassword, $user['password'])) {
                 $this->log("Password update failed: Invalid current password for user: {$userId}");
                 return [
                     'success' => false,
@@ -1411,6 +1420,9 @@ class Auth {
             if ($result) {
                 $this->log("Email updated successfully for user ID: {$userId} from {$user['email']} to {$newEmail}");
                 
+                // Update session email immediately
+                $_SESSION['email'] = $newEmail;
+                
                 // Log to SystemLogger if available
                 if ($this->systemLogger) {
                     $this->systemLogger->log('security', 'email_changed', $userId, "Email changed from {$user['email']} to {$newEmail}");
@@ -1421,11 +1433,15 @@ class Auth {
                 
                 if (!$emailSent) {
                     $this->log("Warning: Confirmation email failed to send to {$newEmail}");
+                    // Still return success since the email was updated in the database
+                    // But inform the user that the confirmation email might not have been sent
                 }
                 
                 return [
                     'success' => true,
-                    'message' => 'Ihre E-Mail-Adresse wurde erfolgreich geändert. Eine Bestätigungsmail wurde an die neue Adresse gesendet.'
+                    'message' => $emailSent 
+                        ? 'Ihre E-Mail-Adresse wurde erfolgreich geändert. Eine Bestätigungsmail wurde an die neue Adresse gesendet.'
+                        : 'Ihre E-Mail-Adresse wurde erfolgreich geändert. Die Bestätigungsmail konnte nicht gesendet werden, aber die Änderung wurde gespeichert.'
                 ];
             }
             
@@ -1459,21 +1475,28 @@ class Auth {
                 return false;
             }
             
+            // Validate SMTP configuration
+            if (!defined('SMTP_HOST') || !defined('SMTP_USER') || !defined('SMTP_PASS') || 
+                empty(SMTP_HOST) || empty(SMTP_USER) || empty(SMTP_PASS)) {
+                $this->log("Warning: SMTP configuration incomplete, cannot send confirmation email");
+                return false;
+            }
+            
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
             
             // Server settings
             $mail->isSMTP();
-            $mail->Host       = defined('SMTP_HOST') ? SMTP_HOST : '';
+            $mail->Host       = SMTP_HOST;
             $mail->SMTPAuth   = true;
-            $mail->Username   = defined('SMTP_USER') ? SMTP_USER : '';
-            $mail->Password   = defined('SMTP_PASS') ? SMTP_PASS : '';
+            $mail->Username   = SMTP_USER;
+            $mail->Password   = SMTP_PASS;
             $mail->SMTPSecure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
             $mail->Port       = defined('SMTP_PORT') ? SMTP_PORT : 587;
             $mail->CharSet    = 'UTF-8';
             
             // Recipients
-            $fromEmail = defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'noreply@ibc.com';
-            $fromName = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'IBC Intranet';
+            $fromEmail = defined('SMTP_FROM_EMAIL') && !empty(SMTP_FROM_EMAIL) ? SMTP_FROM_EMAIL : SMTP_USER;
+            $fromName = defined('SMTP_FROM_NAME') && !empty(SMTP_FROM_NAME) ? SMTP_FROM_NAME : 'IBC Intranet';
             $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($email, "{$firstname} {$lastname}");
             

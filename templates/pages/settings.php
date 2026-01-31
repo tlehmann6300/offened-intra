@@ -591,13 +591,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     showToastLocal(data.message, 'success');
+                    // Update the displayed current email without page reload
+                    document.getElementById('currentEmail').value = document.getElementById('newEmail').value;
                     // Reset form on success
                     document.getElementById('newEmail').value = '';
                     document.getElementById('emailPassword').value = '';
-                    // Reload page after short delay to update current email display
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
                 } else {
                     showToastLocal(data.message || 'Fehler beim Ändern der E-Mail-Adresse', 'danger');
                 }
