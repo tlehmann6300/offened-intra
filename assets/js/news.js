@@ -155,6 +155,7 @@ function loadMoreNews() {
         })
     })
     .then(response => {
+        // Check for HTTP error status
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -164,6 +165,12 @@ function loadMoreNews() {
         // Remove skeleton loaders
         removeNewsSkeletonLoaders(newsGrid);
         
+        // Hide loading spinner
+        if (loadingSpinner) {
+            loadingSpinner.classList.add('d-none');
+        }
+        
+        // Process articles if available
         if (data.success && data.articles && data.articles.length > 0) {
             // Append new articles to grid with fade-in animation
             appendArticlesToGrid(data.articles, newsGrid);
@@ -171,11 +178,6 @@ function loadMoreNews() {
             // Update offset for next load
             const newOffset = offset + data.articles.length;
             loadMoreBtn.setAttribute('data-offset', newOffset);
-            
-            // Hide loading spinner
-            if (loadingSpinner) {
-                loadingSpinner.classList.add('d-none');
-            }
             
             // Restore button state using toggleButtonState
             if (typeof toggleButtonState === 'function') {
@@ -190,12 +192,8 @@ function loadMoreNews() {
                 loadMoreBtn.disabled = true;
                 loadMoreBtn.innerHTML = '<i class="fas fa-check me-2"></i>Alle Beiträge geladen';
             }
-        } else {
-            // No more articles available
-            if (loadingSpinner) {
-                loadingSpinner.classList.add('d-none');
-            }
-            
+        } else if (data.articles?.length === 0) {
+            // No more articles available - end reached
             // Show "no more articles" message
             const message = document.createElement('div');
             message.className = 'col-12 fade-in-news';
@@ -217,12 +215,15 @@ function loadMoreNews() {
             
             // Remove load more button
             loadMoreBtn.remove();
+        } else {
+            // API error or unexpected response format - treat as error
+            throw new Error(data.message || 'Unerwartetes Antwortformat vom Server');
         }
     })
     .catch(error => {
         console.error('Error loading more news:', error);
         
-        // Remove skeleton loaders
+        // Remove skeleton loaders on error
         removeNewsSkeletonLoaders(newsGrid);
         
         // Hide spinner
@@ -230,26 +231,36 @@ function loadMoreNews() {
             loadingSpinner.classList.add('d-none');
         }
         
-        // Update button text for retry before restoring state
-        // Store the new text as the "original" content for future toggles
-        loadMoreBtn.dataset.originalContent = '<i class="fas fa-sync-alt me-2"></i>Erneut versuchen';
+        // Remove any existing error messages to avoid duplicates
+        const existingError = document.querySelector('.load-more-error-message');
+        if (existingError) {
+            existingError.remove();
+        }
         
-        // Restore button state using toggleButtonState
+        // Update button text to "Fehler – Erneut versuchen"
+        loadMoreBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Fehler – Erneut versuchen';
+        
+        // Update the original content for toggleButtonState if it exists
+        if (loadMoreBtn.dataset.originalContent) {
+            loadMoreBtn.dataset.originalContent = '<i class="fas fa-sync-alt me-2"></i>Fehler – Erneut versuchen';
+        }
+        
+        // Restore button state using toggleButtonState (makes button visible and clickable)
         if (typeof toggleButtonState === 'function') {
             toggleButtonState(loadMoreBtn, false);
         } else {
             // Fallback
             loadMoreBtn.classList.remove('d-none');
-            loadMoreBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Erneut versuchen';
+            loadMoreBtn.disabled = false;
         }
         
-        // Show error message with retry button
+        // Show error message
         const errorMsg = document.createElement('div');
-        errorMsg.className = 'col-12 fade-in-news';
+        errorMsg.className = 'col-12 fade-in-news load-more-error-message';
         errorMsg.innerHTML = `
             <div class="alert alert-danger text-center">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                Fehler beim Laden der Beiträge. Bitte versuchen Sie es erneut.
+                Netzwerkfehler beim Laden der Beiträge. Bitte versuchen Sie es erneut.
             </div>
         `;
         
@@ -261,9 +272,9 @@ function loadMoreNews() {
             errorMsg.classList.add('visible');
         }, 10);
         
-        // Show toast notification
+        // Show toast notification for network problems
         if (typeof showToast === 'function') {
-            showToast('Fehler beim Laden der Beiträge', 'danger');
+            showToast('Netzwerkfehler beim Laden der Beiträge', 'danger');
         }
     });
 }
