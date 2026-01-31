@@ -165,7 +165,7 @@ echo "\n";
 // Test 9: Privacy setting check
 echo "Test 9: Privacy Implementation Check\n";
 echo "----------------------------------------\n";
-if (strpos($scriptContent, 'notify_birthday = 1') !== false || strpos($scriptContent, 'notify_birthday = TRUE') !== false) {
+if (strpos($scriptContent, 'notify_birthday = 1') !== false) {
     echo "✓ Script checks notify_birthday privacy setting\n";
 }
 if (strpos($scriptContent, 'WHERE') !== false && strpos($scriptContent, 'notify_birthday') !== false) {

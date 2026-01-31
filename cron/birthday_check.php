@@ -163,6 +163,10 @@ try {
     echo "Checking for birthdays on: {$todayDay}.{$todayMonth}\n\n";
     
     // Query users with birthday today AND notify_birthday = TRUE
+    // Note: We use MONTH() and DAY() functions which work well for birthday queries.
+    // The idx_users_birthdate index helps narrow down candidates efficiently.
+    // For very large user bases (10,000+ users), consider using a computed column
+    // or materialized view with MM-DD format for optimal index usage.
     $stmt = $userPdo->prepare("
         SELECT 
             id,
