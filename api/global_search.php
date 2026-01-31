@@ -4,9 +4,14 @@ declare(strict_types=1);
 /**
  * Global Search API
  * 
- * Centralized search endpoint that searches across multiple database tables using UNION queries.
+ * Centralized search endpoint that searches across multiple database tables using UNION ALL queries.
  * Searches: inventory, users/alumni_profiles, news, events, and projects.
  * Returns results grouped by type (inventory, user, news, event, project).
+ * 
+ * Performance optimizations:
+ * - Uses UNION ALL instead of UNION for better performance (no duplicate removal overhead)
+ * - Supports limit/offset pagination (limit: 1-100, default 50; offset: >= 0, default 0)
+ * - Database indexes recommended: inventory(name), users(firstname, lastname), news(title)
  */
 
 // Set JSON response header
