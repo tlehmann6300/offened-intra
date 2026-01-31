@@ -536,13 +536,13 @@ function openNewsEditorModal(newsId = null) {
 function saveNewsArticle() {
     const form = document.getElementById('newsEditorForm');
     
-    // Get Quill content
+    // Get Quill content and set it to hidden field before validation
     const content = quill.root.innerHTML;
     document.getElementById('newsContent').value = content;
     
-    // Validate content using Quill's text method for more reliable empty check
-    const textContent = quill.getText().trim();
-    if (textContent.length === 0) {
+    // Validate content using Quill's getLength() to ignore the default \n
+    // getLength() returns 1 for empty editor (default \n), so check if > 1
+    if (quill.getLength() <= 1) {
         document.getElementById('contentFeedback').style.display = 'block';
         return;
     } else {

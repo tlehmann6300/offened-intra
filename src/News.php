@@ -158,6 +158,269 @@ class News {
     }
     
     /**
+     * Sanitize HTML content using a whitelist approach
+     * Allows only safe HTML tags and attributes commonly used in rich text editors
+     * 
+     * @param string $html Raw HTML content from Quill editor
+     * @return string Sanitized HTML content safe for storage and display
+     */
+    private function sanitizeHtml(string $html): string {
+        // Define allowed tags and their attributes
+        $allowedTags = [
+            'p' => [],
+            'br' => [],
+            'strong' => [],
+            'b' => [],
+            'em' => [],
+            'i' => [],
+            'u' => [],
+            's' => [],
+            'strike' => [],
+            'h1' => [],
+            'h2' => [],
+            'h3' => [],
+            'ul' => [],
+            'ol' => [],
+            'li' => [],
+            'a' => ['href', 'target', 'rel'],
+            'span' => ['style'],
+        ];
+        
+        // Use DOMDocument for safe HTML parsing
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        
+        // Suppress warnings for malformed HTML
+        $previousValue = libxml_use_internal_errors(true);
+        
+        // Wrap content in a temporary div for processing
+        $wrappedHtml = '<div>' . $html . '</div>';
+        
+        // Load HTML with UTF-8 encoding
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        
+        // Clear errors
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousValue);
+        
+        // Get the wrapper div
+        $wrapper = $dom->getElementsByTagName('div')->item(0);
+        
+        if ($wrapper === null) {
+            return '';
+        }
+        
+        // Remove disallowed tags and attributes
+        $this->sanitizeDomNode($wrapper, $allowedTags);
+        
+        // Extract the content from wrapper
+        $sanitized = '';
+        foreach ($wrapper->childNodes as $child) {
+            $sanitized .= $dom->saveHTML($child);
+        }
+        
+        return $sanitized;
+    }
+    
+    /**
+     * Recursively sanitize DOM nodes
+     * 
+     * @param \DOMNode $node Current node to sanitize
+     * @param array $allowedTags Allowed tags and their attributes
+     */
+    private function sanitizeDomNode(\DOMNode $node, array $allowedTags): void {
+        if (!$node->hasChildNodes()) {
+            return;
+        }
+        
+        $nodesToRemove = [];
+        $nodesToReplace = [];
+        
+        // Iterate through child nodes (use iterator to avoid modification issues)
+        $children = [];
+        foreach ($node->childNodes as $child) {
+            $children[] = $child;
+        }
+        
+        foreach ($children as $child) {
+            if ($child->nodeType === XML_ELEMENT_NODE) {
+                $tagName = strtolower($child->nodeName);
+                
+                // Check if tag is allowed
+                if (!isset($allowedTags[$tagName])) {
+                    // Mark for removal but preserve text content
+                    $nodesToReplace[$child->getNodePath()] = $child;
+                    continue;
+                }
+                
+                // Remove disallowed attributes
+                if ($child->hasAttributes()) {
+                    $attributesToRemove = [];
+                    
+                    foreach ($child->attributes as $attr) {
+                        $attrName = strtolower($attr->nodeName);
+                        
+                        // Special handling for style attribute - only allow safe color properties
+                        if ($attrName === 'style' && in_array('style', $allowedTags[$tagName], true)) {
+                            $safeStyle = $this->sanitizeStyleAttribute($attr->nodeValue);
+                            if (!empty($safeStyle)) {
+                                $child->setAttribute('style', $safeStyle);
+                            } else {
+                                $attributesToRemove[] = $attrName;
+                            }
+                        } elseif (!in_array($attrName, $allowedTags[$tagName], true)) {
+                            $attributesToRemove[] = $attrName;
+                        }
+                    }
+                    
+                    foreach ($attributesToRemove as $attrName) {
+                        $child->removeAttribute($attrName);
+                    }
+                }
+                
+                // Recursively sanitize children
+                $this->sanitizeDomNode($child, $allowedTags);
+            }
+        }
+        
+        // Replace disallowed nodes with their text content
+        foreach ($nodesToReplace as $nodeToReplace) {
+            // Extract text content only (no HTML tags)
+            $textContent = $nodeToReplace->textContent;
+            
+            if (!empty($textContent)) {
+                $textNode = $node->ownerDocument->createTextNode($textContent);
+                $node->replaceChild($textNode, $nodeToReplace);
+            } else {
+                $node->removeChild($nodeToReplace);
+            }
+        }
+    }
+    
+    /**
+     * Sanitize CSS style attribute to allow only safe properties
+     * 
+     * @param string $style Raw style attribute value
+     * @return string Sanitized style value
+     */
+    private function sanitizeStyleAttribute(string $style): string {
+        // Allow safe properties commonly used by Quill
+        $allowedProperties = ['color', 'background-color', 'text-align', 'font-size', 'font-family', 'line-height'];
+        $safeStyles = [];
+        
+        // Define valid color names (CSS3 standard colors)
+        $validColorNames = [
+            'black', 'silver', 'gray', 'white', 'maroon', 'red', 'purple', 'fuchsia',
+            'green', 'lime', 'olive', 'yellow', 'navy', 'blue', 'teal', 'aqua',
+            'orange', 'aliceblue', 'antiquewhite', 'aquamarine', 'azure', 'beige',
+            'bisque', 'blanchedalmond', 'blueviolet', 'brown', 'burlywood', 'cadetblue',
+            'chartreuse', 'chocolate', 'coral', 'cornflowerblue', 'cornsilk', 'crimson',
+            'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod', 'darkgray', 'darkgreen',
+            'darkgrey', 'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange',
+            'darkorchid', 'darkred', 'darksalmon', 'darkseagreen', 'darkslateblue',
+            'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink',
+            'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite',
+            'forestgreen', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'greenyellow',
+            'grey', 'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki',
+            'lavender', 'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue',
+            'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray', 'lightgreen',
+            'lightgrey', 'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue',
+            'lightslategray', 'lightslategrey', 'lightsteelblue', 'lightyellow',
+            'limegreen', 'linen', 'magenta', 'mediumaquamarine', 'mediumblue',
+            'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue',
+            'mediumspringgreen', 'mediumturquoise', 'mediumvioletred', 'midnightblue',
+            'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'oldlace', 'olivedrab',
+            'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise',
+            'palevioletred', 'papayawhip', 'peachpuff', 'peru', 'pink', 'plum',
+            'powderblue', 'rebeccapurple', 'rosybrown', 'royalblue', 'saddlebrown',
+            'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna', 'skyblue',
+            'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue',
+            'tan', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'whitesmoke',
+            'yellowgreen', 'transparent'
+        ];
+        
+        // Parse style declarations
+        $declarations = explode(';', $style);
+        foreach ($declarations as $declaration) {
+            $parts = explode(':', $declaration, 2);
+            if (count($parts) === 2) {
+                $property = trim(strtolower($parts[0]));
+                $value = trim($parts[1]);
+                
+                if (in_array($property, $allowedProperties, true)) {
+                    // Validate color values (for color and background-color)
+                    if (in_array($property, ['color', 'background-color'], true)) {
+                        // Check hex color (#RGB or #RRGGBB)
+                        if (preg_match('/^#[0-9a-f]{3}([0-9a-f]{3})?$/i', $value)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                        // Check rgb(r, g, b) - validate numeric ranges
+                        elseif (preg_match('/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i', $value, $matches)) {
+                            $r = (int)$matches[1];
+                            $g = (int)$matches[2];
+                            $b = (int)$matches[3];
+                            if ($r <= 255 && $g <= 255 && $b <= 255) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
+                        // Check rgba(r, g, b, a) - validate numeric ranges
+                        elseif (preg_match('/^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([0-9.]+)\s*\)$/i', $value, $matches)) {
+                            $r = (int)$matches[1];
+                            $g = (int)$matches[2];
+                            $b = (int)$matches[3];
+                            $a = (float)$matches[4];
+                            if ($r <= 255 && $g <= 255 && $b <= 255 && $a >= 0 && $a <= 1) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
+                        // Check named colors
+                        elseif (in_array(strtolower($value), $validColorNames, true)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                    }
+                    // Validate text-align values
+                    elseif ($property === 'text-align') {
+                        if (in_array($value, ['left', 'right', 'center', 'justify'], true)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                    }
+                    // Validate font-size (allow px, em, rem, %, pt units with reasonable limits)
+                    elseif ($property === 'font-size') {
+                        if (preg_match('/^(\d+(?:\.\d+)?)(px|em|rem|%|pt)$/i', $value, $matches)) {
+                            $size = (float)$matches[1];
+                            $unit = strtolower($matches[2]);
+                            // Set reasonable limits to prevent layout abuse
+                            $maxSizes = ['px' => 200, 'em' => 10, 'rem' => 10, '%' => 500, 'pt' => 200];
+                            if ($size > 0 && $size <= $maxSizes[$unit]) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
+                    }
+                    // Validate font-family (allow common safe fonts)
+                    elseif ($property === 'font-family') {
+                        // Only allow alphanumeric, spaces, commas, quotes, and hyphens
+                        if (preg_match('/^[a-z0-9\s,\'\"\-]+$/i', $value)) {
+                            $safeStyles[] = $property . ': ' . $value;
+                        }
+                    }
+                    // Validate line-height (unitless or with units)
+                    elseif ($property === 'line-height') {
+                        if (preg_match('/^(\d+(?:\.\d+)?)(px|em|rem|%)?$/i', $value, $matches)) {
+                            $size = (float)$matches[1];
+                            $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+                            // Reasonable limits
+                            if ($size > 0 && $size <= 10) {
+                                $safeStyles[] = $property . ': ' . $value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return implode('; ', $safeStyles);
+    }
+    
+    /**
      * Save (create or update) a news article
      * Only users with 'vorstand' or 'ressort' role can save news
      * 
@@ -172,6 +435,9 @@ class News {
             $this->log("Error saving news: Title and content are required");
             return false;
         }
+        
+        // Sanitize HTML content to prevent XSS attacks
+        $data['content'] = $this->sanitizeHtml($data['content']);
         
         // Check permissions - only 'vorstand' or 'ressort' can save news
         $userRole = $data['user_role'] ?? null;
