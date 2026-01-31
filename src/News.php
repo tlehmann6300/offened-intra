@@ -184,30 +184,39 @@ class News {
             'li' => [],
             'a' => ['href', 'target', 'rel'],
             'span' => ['style'],
-            'div' => []
         ];
         
-        // Use DOMDocument for safe HTML parsing and manipulation
+        // Use DOMDocument for safe HTML parsing
         $dom = new \DOMDocument('1.0', 'UTF-8');
         
         // Suppress warnings for malformed HTML
         $previousValue = libxml_use_internal_errors(true);
         
+        // Wrap content in a temporary div for processing
+        $wrappedHtml = '<div>' . $html . '</div>';
+        
         // Load HTML with UTF-8 encoding
-        $dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         
         // Clear errors
         libxml_clear_errors();
         libxml_use_internal_errors($previousValue);
         
+        // Get the wrapper div
+        $wrapper = $dom->getElementsByTagName('div')->item(0);
+        
+        if ($wrapper === null) {
+            return '';
+        }
+        
         // Remove disallowed tags and attributes
-        $this->sanitizeDomNode($dom->documentElement, $allowedTags);
+        $this->sanitizeDomNode($wrapper, $allowedTags);
         
-        // Export clean HTML
-        $sanitized = $dom->saveHTML($dom->documentElement);
-        
-        // Remove the XML encoding declaration if present
-        $sanitized = preg_replace('/^<\?xml[^>]+>\s*/', '', $sanitized);
+        // Extract the content from wrapper
+        $sanitized = '';
+        foreach ($wrapper->childNodes as $child) {
+            $sanitized .= $dom->saveHTML($child);
+        }
         
         return $sanitized;
     }
@@ -219,57 +228,71 @@ class News {
      * @param array $allowedTags Allowed tags and their attributes
      */
     private function sanitizeDomNode(\DOMNode $node, array $allowedTags): void {
-        $nodesToRemove = [];
+        if (!$node->hasChildNodes()) {
+            return;
+        }
         
-        // Iterate through child nodes
-        if ($node->hasChildNodes()) {
-            foreach ($node->childNodes as $child) {
-                if ($child->nodeType === XML_ELEMENT_NODE) {
-                    $tagName = strtolower($child->nodeName);
+        $nodesToRemove = [];
+        $nodesToReplace = [];
+        
+        // Iterate through child nodes (use iterator to avoid modification issues)
+        $children = [];
+        foreach ($node->childNodes as $child) {
+            $children[] = $child;
+        }
+        
+        foreach ($children as $child) {
+            if ($child->nodeType === XML_ELEMENT_NODE) {
+                $tagName = strtolower($child->nodeName);
+                
+                // Check if tag is allowed
+                if (!isset($allowedTags[$tagName])) {
+                    // Mark for removal but preserve text content
+                    $nodesToReplace[$child->getNodePath()] = $child;
+                    continue;
+                }
+                
+                // Remove disallowed attributes
+                if ($child->hasAttributes()) {
+                    $attributesToRemove = [];
                     
-                    // Check if tag is allowed
-                    if (!isset($allowedTags[$tagName])) {
-                        $nodesToRemove[] = $child;
-                        continue;
-                    }
-                    
-                    // Remove disallowed attributes
-                    if ($child->hasAttributes()) {
-                        $attributesToRemove = [];
-                        foreach ($child->attributes as $attr) {
-                            $attrName = strtolower($attr->nodeName);
-                            
-                            // Special handling for style attribute - only allow safe color properties
-                            if ($attrName === 'style' && in_array('style', $allowedTags[$tagName], true)) {
-                                $safeStyle = $this->sanitizeStyleAttribute($attr->nodeValue);
-                                if (!empty($safeStyle)) {
-                                    $child->setAttribute('style', $safeStyle);
-                                } else {
-                                    $attributesToRemove[] = $attrName;
-                                }
-                            } elseif (!in_array($attrName, $allowedTags[$tagName], true)) {
+                    foreach ($child->attributes as $attr) {
+                        $attrName = strtolower($attr->nodeName);
+                        
+                        // Special handling for style attribute - only allow safe color properties
+                        if ($attrName === 'style' && in_array('style', $allowedTags[$tagName], true)) {
+                            $safeStyle = $this->sanitizeStyleAttribute($attr->nodeValue);
+                            if (!empty($safeStyle)) {
+                                $child->setAttribute('style', $safeStyle);
+                            } else {
                                 $attributesToRemove[] = $attrName;
                             }
-                        }
-                        
-                        foreach ($attributesToRemove as $attrName) {
-                            $child->removeAttribute($attrName);
+                        } elseif (!in_array($attrName, $allowedTags[$tagName], true)) {
+                            $attributesToRemove[] = $attrName;
                         }
                     }
                     
-                    // Recursively sanitize children
-                    $this->sanitizeDomNode($child, $allowedTags);
+                    foreach ($attributesToRemove as $attrName) {
+                        $child->removeAttribute($attrName);
+                    }
                 }
+                
+                // Recursively sanitize children
+                $this->sanitizeDomNode($child, $allowedTags);
             }
         }
         
-        // Remove disallowed nodes
-        foreach ($nodesToRemove as $nodeToRemove) {
-            // Keep the text content of the removed node
-            while ($nodeToRemove->hasChildNodes()) {
-                $node->insertBefore($nodeToRemove->firstChild, $nodeToRemove);
+        // Replace disallowed nodes with their text content
+        foreach ($nodesToReplace as $nodeToReplace) {
+            // Extract text content only (no HTML tags)
+            $textContent = $nodeToReplace->textContent;
+            
+            if (!empty($textContent)) {
+                $textNode = $node->ownerDocument->createTextNode($textContent);
+                $node->replaceChild($textNode, $nodeToReplace);
+            } else {
+                $node->removeChild($nodeToReplace);
             }
-            $node->removeChild($nodeToRemove);
         }
     }
     
