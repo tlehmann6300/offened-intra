@@ -29,6 +29,7 @@ This document describes the refactoring of `Auth.php` to implement a pure intern
 
 **New Dependencies:**
 - Added `sonata-project/google-authenticator` package via Composer
+- **Note:** This package is marked as abandoned. Consider migrating to `spomky-labs/otphp` or `pragmarx/google2fa` in the future for continued security updates.
 
 **New Methods in Auth.php:**
 - `generateTotpSecret()` - Generate a new TOTP secret for a user
@@ -301,11 +302,12 @@ WHERE ip_address = 'xxx.xxx.xxx.xxx';
 
 ## Future Enhancements
 
-1. **Backup Codes:** Generate one-time backup codes for 2FA
-2. **Recovery Email:** Add password reset via email
-3. **Login Notifications:** Email alerts for new logins
-4. **Device Trust:** Remember trusted devices for 30 days
-5. **Admin Dashboard:** View login attempts and security events
+1. **Migrate TOTP Library:** Replace `sonata-project/google-authenticator` with `spomky-labs/otphp` or `pragmarx/google2fa` (abandoned package)
+2. **Backup Codes:** Generate one-time backup codes for 2FA
+3. **Recovery Email:** Add password reset via email
+4. **Login Notifications:** Email alerts for new logins
+5. **Device Trust:** Remember trusted devices for 30 days
+6. **Admin Dashboard:** View login attempts and security events
 
 ## Related Files
 

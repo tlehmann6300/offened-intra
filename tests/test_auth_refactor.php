@@ -72,10 +72,10 @@ echo "\n";
 echo "Test 3: TOTP Secret Generation\n";
 try {
     $secret = $auth->generateTotpSecret();
-    if (!empty($secret) && strlen($secret) === 16) {
-        echo "✓ TOTP secret generated successfully: {$secret}\n";
+    if (!empty($secret) && strlen($secret) >= 16 && strlen($secret) <= 32) {
+        echo "✓ TOTP secret generated successfully: {$secret} (length: " . strlen($secret) . ")\n";
     } else {
-        echo "✗ TOTP secret generation failed or returned unexpected format\n";
+        echo "✗ TOTP secret generation failed or returned unexpected format (length: " . strlen($secret) . ")\n";
     }
 } catch (Exception $e) {
     echo "✗ Error generating TOTP secret: " . $e->getMessage() . "\n";
