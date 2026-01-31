@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 /**
  * Helper Service Class
  * Manages helper slots and registrations for events
@@ -9,9 +13,17 @@ declare(strict_types=1);
  */
 class HelperService {
     private PDO $pdo;
+    private string $logFile;
     
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
+        $this->logFile = BASE_PATH . '/logs/app.log';
+        
+        // Ensure logs directory exists
+        $logDir = dirname($this->logFile);
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
     }
     
     /**
@@ -161,6 +173,9 @@ class HelperService {
                 // Get updated slot info
                 $updatedSlot = $this->getSlotInfo($slotId);
                 
+                // Send confirmation email to the helper
+                $this->sendHelperConfirmationEmail($slotId, $userId);
+                
                 return [
                     'success' => true,
                     'message' => 'Erfolgreich angemeldet!',
@@ -273,6 +288,280 @@ class HelperService {
         } catch (PDOException $e) {
             error_log("Error fetching slot info: " . $e->getMessage());
             return [];
+        }
+    }
+    
+    /**
+     * Send confirmation email to helper after successful registration
+     * 
+     * @param int $slotId Helper slot ID
+     * @param int $userId User ID
+     * @return bool Success status
+     */
+    private function sendHelperConfirmationEmail(int $slotId, int $userId): bool {
+        try {
+            // Check if PHPMailer is available
+            if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+                $this->log("Warning: PHPMailer not available for helper confirmation email");
+                return false;
+            }
+            
+            // Get slot and event information
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    s.task_name,
+                    s.start_time,
+                    s.end_time,
+                    e.id as event_id,
+                    e.title as event_title,
+                    e.event_date,
+                    e.location
+                FROM event_helper_slots s
+                INNER JOIN events e ON s.event_id = e.id
+                WHERE s.id = ?
+            ");
+            $stmt->execute([$slotId]);
+            $slotData = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$slotData) {
+                $this->log("Error: Slot with ID {$slotId} not found for email confirmation");
+                return false;
+            }
+            
+            // Get user email and name
+            $stmt = $this->pdo->prepare("
+                SELECT email, firstname, lastname
+                FROM users
+                WHERE id = ?
+            ");
+            $stmt->execute([$userId]);
+            $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$userData || empty($userData['email'])) {
+                $this->log("Error: User with ID {$userId} not found or has no email address");
+                return false;
+            }
+            
+            // Generate email content
+            $emailSubject = "Bestätigung: Helfer-Anmeldung für " . $slotData['event_title'];
+            $emailHtml = $this->generateHelperConfirmationEmailHtml($slotData, $userData);
+            
+            // Send email
+            $result = $this->sendEmail(
+                $userData['email'],
+                $emailSubject,
+                $emailHtml,
+                $userData['firstname'] . ' ' . $userData['lastname']
+            );
+            
+            if ($result) {
+                $this->log("Helper confirmation email sent to user ID {$userId} for slot ID {$slotId}");
+            } else {
+                $this->log("Failed to send helper confirmation email to user ID {$userId} for slot ID {$slotId}");
+            }
+            
+            return $result;
+        } catch (PDOException $e) {
+            $this->log("Error sending helper confirmation email: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Generate HTML email content for helper confirmation
+     * 
+     * @param array $slotData Slot and event data
+     * @param array $userData User data
+     * @return string HTML email content
+     */
+    private function generateHelperConfirmationEmailHtml(array $slotData, array $userData): string {
+        // Format date and time
+        $eventDate = date('d.m.Y', strtotime($slotData['event_date']));
+        $startTime = !empty($slotData['start_time']) ? date('H:i', strtotime($slotData['start_time'])) : '';
+        $endTime = !empty($slotData['end_time']) ? date('H:i', strtotime($slotData['end_time'])) : '';
+        $timeRange = $startTime && $endTime ? "{$startTime} - {$endTime} Uhr" : '';
+        
+        $location = !empty($slotData['location']) ? $slotData['location'] : 'Noch nicht bekannt';
+        
+        // Logo URL
+        $logoUrl = SITE_URL . '/assets/img/ibc_logo_original.webp';
+        
+        // Full name
+        $fullName = trim(($userData['firstname'] ?? '') . ' ' . ($userData['lastname'] ?? ''));
+        
+        // Build HTML email
+        $html = '<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helfer-Anmeldung Bestätigung</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif; background-color: #f4f4f4;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4; padding: 20px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 40px; text-align: center;">
+                            <img src="' . htmlspecialchars($logoUrl) . '" alt="IBC Logo" style="max-width: 150px; height: auto;">
+                            <h1 style="color: #ffffff; margin: 20px 0 0 0; font-size: 24px; font-weight: 600;">
+                                Anmeldung bestätigt
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Hallo ' . htmlspecialchars($fullName) . ',
+                            </p>
+                            
+                            <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                                vielen Dank für deine Anmeldung als Helfer! Wir freuen uns, dass du dabei bist.
+                            </p>
+                            
+                            <!-- Event Details Card -->
+                            <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 0 0 30px 0; border-radius: 4px;">
+                                <h2 style="color: #667eea; font-size: 20px; margin: 0 0 15px 0; font-weight: 600;">
+                                    ' . htmlspecialchars($slotData['event_title']) . '
+                                </h2>
+                                
+                                <table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 140px; vertical-align: top;">
+                                            <strong>📅 Datum:</strong>
+                                        </td>
+                                        <td style="padding: 8px 0; color: #333333; font-size: 14px;">
+                                            ' . htmlspecialchars($eventDate) . '
+                                        </td>
+                                    </tr>
+                                    ' . ($timeRange ? '<tr>
+                                        <td style="padding: 8px 0; color: #666666; font-size: 14px; vertical-align: top;">
+                                            <strong>🕐 Zeit:</strong>
+                                        </td>
+                                        <td style="padding: 8px 0; color: #333333; font-size: 14px;">
+                                            ' . htmlspecialchars($timeRange) . '
+                                        </td>
+                                    </tr>' : '') . '
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666666; font-size: 14px; vertical-align: top;">
+                                            <strong>📍 Ort:</strong>
+                                        </td>
+                                        <td style="padding: 8px 0; color: #333333; font-size: 14px;">
+                                            ' . htmlspecialchars($location) . '
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666666; font-size: 14px; vertical-align: top;">
+                                            <strong>✅ Aufgabe:</strong>
+                                        </td>
+                                        <td style="padding: 8px 0; color: #333333; font-size: 14px;">
+                                            ' . htmlspecialchars($slotData['task_name']) . '
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Weitere Informationen zum Event findest du im Intranet.
+                            </p>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="' . htmlspecialchars(SITE_URL . '/index.php?page=events') . '" 
+                                   style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                          color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 5px; 
+                                          font-weight: 600; font-size: 16px;">
+                                    Zum Event-Bereich
+                                </a>
+                            </div>
+                            
+                            <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
+                                Viele Grüße,<br>
+                                <strong>Dein IBC-Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 20px 40px; text-align: center; border-top: 1px solid #e0e0e0;">
+                            <p style="color: #999999; font-size: 12px; line-height: 1.5; margin: 0;">
+                                Diese E-Mail wurde automatisch vom IBC-Intranet gesendet.<br>
+                                Bei Fragen wende dich bitte an den Event-Veranstalter.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+        
+        return $html;
+    }
+    
+    /**
+     * Send email using PHPMailer with SMTP
+     * 
+     * @param string $to Recipient email address
+     * @param string $subject Email subject
+     * @param string $htmlBody HTML email body
+     * @param string $recipientName Recipient name
+     * @return bool Success status
+     */
+    private function sendEmail(string $to, string $subject, string $htmlBody, string $recipientName = ''): bool {
+        try {
+            $mail = new PHPMailer(true);
+            
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host       = SMTP_HOST;
+            $mail->SMTPAuth   = true;
+            $mail->Username   = SMTP_USER;
+            $mail->Password   = SMTP_PASS;
+            $mail->SMTPSecure = SMTP_SECURE;
+            $mail->Port       = SMTP_PORT;
+            $mail->CharSet    = 'UTF-8';
+            
+            // Recipients
+            $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+            $mail->addAddress($to, $recipientName);
+            
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body    = $htmlBody;
+            
+            // Generate plain text alternative
+            $plainText = strip_tags(str_replace(['</p>', '<br>', '<br/>', '<br />'], "\n\n", $htmlBody));
+            $mail->AltBody = $plainText;
+            
+            $mail->send();
+            return true;
+        } catch (Exception $e) {
+            $this->log("Email send failed to {$to}: {$mail->ErrorInfo}");
+            return false;
+        }
+    }
+    
+    /**
+     * Log message to application log file
+     * 
+     * @param string $message Message to log
+     */
+    private function log(string $message): void {
+        $timestamp = date('Y-m-d H:i:s');
+        $logMessage = "[{$timestamp}] [HELPER-SERVICE] {$message}" . PHP_EOL;
+        
+        // Write to log file with error handling
+        $result = file_put_contents($this->logFile, $logMessage, FILE_APPEND | LOCK_EX);
+        
+        if ($result === false) {
+            error_log("Failed to write to log file: {$this->logFile}. Original message: {$message}");
         }
     }
 }
