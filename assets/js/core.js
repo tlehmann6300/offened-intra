@@ -985,3 +985,413 @@ function applyToProject(projectTitle) {
     });
     */
 }
+
+// ============================================================================
+// MAIN INITIALIZATION
+// ============================================================================
+
+/**
+ * Main initialization on DOMContentLoaded
+ * Initializes all core functionality and conditionally loads module-specific features
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Initialize high-contrast mode from localStorage
+    const highContrastMode = getStorageItem('high_contrast_mode') === 'true';
+    if (highContrastMode) {
+        document.body.classList.add('high-contrast-mode');
+    }
+    
+    // Cookie Banner Logic
+    const cookieBanner = document.getElementById("cookie-banner");
+    if (cookieBanner) {
+        // Check for consent - try primary key first, then fallback key
+        // Note: cookie_banner_shown is a legacy fallback for when localStorage fails
+        const consentGiven = getStorageItem("cookie_consent") || getStorageItem("cookie_banner_shown");
+        
+        if (!consentGiven) {
+            setTimeout(() => {
+                cookieBanner.classList.add("show");
+            }, COOKIE_BANNER_SHOW_DELAY);
+        }
+        
+        // Add event listener for accept button
+        const acceptButton = document.getElementById('cookie-accept-btn');
+        if (acceptButton) {
+            acceptButton.addEventListener('click', acceptCookies);
+        }
+        
+        // Add event listener for decline button
+        const declineButton = document.getElementById('cookie-decline-btn');
+        if (declineButton) {
+            declineButton.addEventListener('click', declineCookies);
+        }
+        
+        // Add event listener for Cookie-Einstellungen button
+        const cookieSettingsButton = document.querySelector('.cookie-settings-link');
+        if (cookieSettingsButton) {
+            cookieSettingsButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                reopenCookieBanner();
+            });
+        }
+    }
+    
+    // Initialize Chart.js if on newsroom page
+    if (document.getElementById('newsChart') && typeof window.newsChartData !== 'undefined') {
+        initNewsChart();
+    }
+    
+    // Add fade-in animation to cards
+    addFadeInAnimation();
+    
+    // Initialize form validation
+    initFormValidation();
+    
+    // Auto-hide alerts after 5 seconds
+    autoHideAlerts();
+    
+    // Initialize language flag on page load
+    initializeLanguageFlag();
+    
+    // Initialize email copy functionality
+    initializeEmailCopy();
+    
+    // Initialize scroll animations
+    initScrollAnimations();
+    
+    // Initialize skeleton loading removal
+    removeSkeletonLoaders();
+    
+    // Initialize logo error handling
+    initLogoErrorHandling();
+    
+    // Initialize global image error handler
+    initGlobalImageErrorHandler();
+    
+    // Initialize inventory management if on inventory page
+    if (document.getElementById('inventoryForm')) {
+        initInventoryManagement();
+    }
+    
+    // Initialize button loading spinners
+    initButtonLoadingSpinners();
+    
+    // Initialize notification bell
+    initNotificationBell();
+    
+    // Initialize AOS after content is fully rendered to prevent layout jumps
+    // Wait for images to load and DOM to stabilize before starting animations
+    initializeAOSWhenReady();
+    
+    // Initialize event countdown timer
+    initEventCountdown();
+});
+function initNotificationBell() {
+    const notificationBell = document.getElementById('notificationBell');
+    const notificationPanel = document.getElementById('notificationPanel');
+    const notificationContent = document.getElementById('notificationContent');
+    const notificationBadge = document.getElementById('notificationBadge');
+    
+    if (!notificationBell || !notificationPanel || !notificationContent) {
+        return;
+    }
+    
+    let panelOpen = false;
+    
+    /**
+     * Toggle notification panel
+     */
+    notificationBell.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        if (panelOpen) {
+            closeNotificationPanel();
+        } else {
+            openNotificationPanel();
+        }
+    });
+    
+    /**
+     * Open notification panel
+     */
+    function openNotificationPanel() {
+        // Show panel
+        notificationPanel.style.display = 'block';
+        panelOpen = true;
+        
+        // Load helper requests
+        loadHelperRequests();
+        
+        // Mark notifications as read
+        markNotificationsAsRead();
+    }
+    
+    /**
+     * Close notification panel
+     */
+    function closeNotificationPanel() {
+        notificationPanel.style.display = 'none';
+        panelOpen = false;
+    }
+    
+    /**
+     * Load helper requests via AJAX
+     */
+    function loadHelperRequests() {
+        // Show loading spinner
+        notificationContent.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Wird geladen...</span>
+                </div>
+            </div>
+        `;
+        
+        // Fetch helper requests
+        fetch(buildApiUrl('api/notification_api.php'), {
+            method: 'POST',
+            headers: addCsrfHeader({
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }),
+            body: 'action=get_helper_requests'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderHelperRequests(data.requests);
+            } else {
+                showError('Fehler beim Laden der Helfer-Gesuche');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading helper requests:', error);
+            showError('Verbindungsfehler');
+        });
+    }
+    
+    /**
+     * Render helper requests in the panel
+     */
+    function renderHelperRequests(requests) {
+        if (!requests || requests.length === 0) {
+            notificationContent.innerHTML = `
+                <div class="text-center py-4 px-3">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Keine neuen Helfer-Gesuche vorhanden</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="list-group list-group-flush">';
+        
+        requests.forEach(request => {
+            const eventDate = new Date(request.event_date).toLocaleDateString('de-DE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            const startTime = new Date(request.start_time).toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const endTime = new Date(request.end_time).toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            html += `
+                <a href="index.php?page=events#event-${request.event_id}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 fw-bold">${escapeHtml(request.event_title)}</h6>
+                            <p class="mb-1 small">
+                                <i class="fas fa-tasks me-1 text-primary"></i>
+                                <strong>${escapeHtml(request.task_name)}</strong>
+                            </p>
+                            <p class="mb-1 small text-muted">
+                                <i class="fas fa-calendar me-1"></i>${eventDate}
+                            </p>
+                            <p class="mb-0 small text-muted">
+                                <i class="fas fa-clock me-1"></i>${startTime} - ${endTime}
+                            </p>
+                        </div>
+                        <div class="text-end ms-3">
+                            <span class="badge bg-success">
+                                ${request.slots_available} ${request.slots_available === 1 ? 'Platz' : 'Plätze'}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            `;
+        });
+        
+        html += '</div>';
+        
+        // Add "View all events" link at bottom
+        html += `
+            <div class="card-footer text-center">
+                <a href="index.php?page=events" class="text-decoration-none">
+                    Alle Events anzeigen <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        `;
+        
+        notificationContent.innerHTML = html;
+    }
+    
+    /**
+     * Show error message in panel
+     */
+    function showError(message) {
+        notificationContent.innerHTML = `
+            <div class="text-center py-4 px-3">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <p class="text-danger">${message}</p>
+            </div>
+        `;
+    }
+    
+    /**
+     * Mark notifications as read via AJAX
+     * Sends request to api/clear_notifications.php to remove the red badge
+     */
+    function markNotificationsAsRead() {
+        // Only mark as read if badge is visible
+        if (!notificationBadge) {
+            return;
+        }
+        
+        fetch(buildApiUrl('api/clear_notifications.php'), {
+            method: 'POST',
+            headers: addCsrfHeader({
+                'Content-Type': 'application/x-www-form-urlencoded'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove badge without page refresh
+                if (notificationBadge) {
+                    notificationBadge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error marking notifications as read:', error);
+        });
+    }
+    
+    /**
+     * Close panel when clicking outside
+     */
+    document.addEventListener('click', function(e) {
+        if (panelOpen && !notificationBell.contains(e.target) && !notificationPanel.contains(e.target)) {
+            closeNotificationPanel();
+        }
+    });
+}
+
+/**
+ * Initialize Quick Add Location functionality
+ * Allows users to quickly add a new location while editing/creating inventory items
+ */
+function initQuickAddLocation() {
+    const quickAddBtn = document.getElementById('quickAddLocationBtn');
+    const quickAddInput = document.getElementById('quickAddLocationInput');
+    const locationSelect = document.getElementById('itemLocation');
+    
+    if (!quickAddBtn || !quickAddInput || !locationSelect) return;
+    
+    quickAddBtn.addEventListener('click', async function() {
+        const locationName = quickAddInput.value.trim();
+        
+        if (!locationName) {
+            showToast('Bitte geben Sie einen Standort-Namen ein', 'warning');
+            return;
+        }
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('[data-csrf-token]')?.getAttribute('data-csrf-token');
+        
+        if (!csrfToken) {
+            showToast('CSRF-Token fehlt. Bitte laden Sie die Seite neu.', 'danger');
+            return;
+        }
+        
+        // Disable button and show loading state using toggleButtonLoading
+        toggleButtonLoading(quickAddBtn, true);
+        
+        try {
+            const formData = new FormData();
+            formData.append('action', 'add_location');
+            formData.append('location_name', locationName);
+            formData.append('csrf_token', csrfToken);
+            
+            const response = await fetch(buildApiUrl('index.php?page=inventory'), {
+                method: 'POST',
+                headers: addCsrfHeader({}),
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast(data.message || 'Standort erfolgreich hinzugefügt', 'success');
+                
+                // Clear input
+                quickAddInput.value = '';
+                
+                // Update location dropdown with new location
+                if (data.location) {
+                    // Create new option
+                    const option = document.createElement('option');
+                    option.value = data.location;
+                    option.textContent = data.location;
+                    option.selected = true;
+                    
+                    // Add to select (insert alphabetically if possible, or just add at end)
+                    locationSelect.add(option);
+                    
+                    // If we have the full list, recreate the dropdown
+                    if (data.locations && Array.isArray(data.locations)) {
+                        // Clear existing options except the first (placeholder)
+                        while (locationSelect.options.length > 1) {
+                            locationSelect.remove(1);
+                        }
+                        
+                        // Add all locations
+                        data.locations.forEach(loc => {
+                            const opt = document.createElement('option');
+                            opt.value = loc;
+                            opt.textContent = loc;
+                            if (loc === data.location) {
+                                opt.selected = true;
+                            }
+                            locationSelect.add(opt);
+                        });
+                    }
+                }
+            } else {
+                showToast(data.message || 'Fehler beim Hinzufügen des Standorts', 'danger');
+            }
+        } catch (error) {
+            console.error('Error adding location:', error);
+            showToast('Fehler beim Hinzufügen des Standorts', 'danger');
+        } finally {
+            // Re-enable button
+            toggleButtonLoading(quickAddBtn, false);
+        }
+    });
+    
+    // Allow Enter key to trigger add
+    quickAddInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            quickAddBtn.click();
+        }
+    });
+}
