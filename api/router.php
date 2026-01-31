@@ -432,6 +432,69 @@ try {
             break;
         
         // ====================================================================
+        // ALUMNI WORKFLOW ACTIONS
+        // ====================================================================
+        
+        case 'request_alumni_status':
+            // User requests to become alumni
+            // Any logged-in member can request alumni status
+            $userId = $auth->getUserId();
+            
+            if (!$userId) {
+                logApiRequest($action, 'FAILED', 'User ID not found');
+                sendResponse(false, 'Benutzer-ID nicht gefunden', [], 400);
+            }
+            
+            $success = $auth->requestAlumniStatus($userId);
+            
+            if ($success) {
+                logApiRequest($action, 'SUCCESS', "User ID: {$userId}");
+                sendResponse(true, 'Alumni-Status beantragt. Ihr Profil wird vom Vorstand geprüft.');
+            } else {
+                logApiRequest($action, 'FAILED', 'Database error');
+                sendResponse(false, 'Fehler beim Beantragen des Alumni-Status', [], 500);
+            }
+            break;
+            
+        case 'validate_alumni':
+            // Validate an alumni user (admin/vorstand only)
+            if (!$auth->checkPermission('vorstand')) {
+                logApiRequest($action, 'DENIED', 'Insufficient permissions');
+                sendResponse(false, 'Keine Berechtigung zur Alumni-Validierung', [], 403);
+            }
+            
+            $alumniUserId = (int)($_POST['user_id'] ?? 0);
+            $validatorUserId = $auth->getUserId();
+            
+            if ($alumniUserId <= 0) {
+                sendResponse(false, 'Ungültige Benutzer-ID', [], 400);
+            }
+            
+            $success = $auth->validateAlumniStatus($alumniUserId, $validatorUserId);
+            
+            if ($success) {
+                logApiRequest($action, 'SUCCESS', "Alumni User ID: {$alumniUserId} validated by {$validatorUserId}");
+                sendResponse(true, 'Alumni-Status erfolgreich validiert');
+            } else {
+                logApiRequest($action, 'FAILED', 'Validation error');
+                sendResponse(false, 'Fehler beim Validieren des Alumni-Status', [], 500);
+            }
+            break;
+            
+        case 'get_pending_alumni':
+            // Get list of pending alumni validations (admin/vorstand only)
+            if (!$auth->checkPermission('vorstand')) {
+                logApiRequest($action, 'DENIED', 'Insufficient permissions');
+                sendResponse(false, 'Keine Berechtigung zur Alumni-Verwaltung', [], 403);
+            }
+            
+            $pendingAlumni = $auth->getPendingAlumniValidations();
+            
+            logApiRequest($action, 'SUCCESS');
+            sendResponse(true, 'Ausstehende Alumni-Validierungen abgerufen', ['alumni' => $pendingAlumni]);
+            break;
+        
+        // ====================================================================
         // DEFAULT: Unknown Action
         // ====================================================================
         

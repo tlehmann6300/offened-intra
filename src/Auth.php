@@ -834,15 +834,21 @@ class Auth {
      * Role hierarchy definition (higher number = more privileges)
      * This constant makes it easier to maintain and modify role hierarchies
      * 
+     * New hierarchy as per requirement:
+     * Admin/1V-3V > Ressortleiter > Mitglied > Alumni
+     * 
      * @var array<string, int>
      */
     private const ROLE_HIERARCHY = [
         'none' => 0,
-        'mitglied' => 1,
-        'alumni' => 2,
-        'ressortleiter' => 3,
-        'vorstand' => 4,
-        'admin' => 5,
+        'alumni' => 1,        // Alumni - lowest active role, requires validation
+        'mitglied' => 2,      // Regular member
+        'ressortleiter' => 3, // Department leader
+        '3v' => 4,            // Third board member (3. Vorstand)
+        '2v' => 5,            // Second board member (2. Vorstand)
+        '1v' => 6,            // First board member (1. Vorstand)
+        'vorstand' => 7,      // Board member (general vorstand)
+        'admin' => 8,         // Full system access
     ];
     
     /**
@@ -852,11 +858,15 @@ class Auth {
      * 
      * Role hierarchy (highest to lowest):
      * - admin: Full system access
-     * - vorstand: Board member access
+     * - vorstand: Board member access (including 1V, 2V, 3V)
      * - ressortleiter: Department leader access
-     * - alumni: Alumni member access
      * - mitglied: Regular member access
+     * - alumni: Alumni member access (lowest active role, requires validation)
      * - none: No access
+     * 
+     * Alumni Validation:
+     * - Alumni users with is_alumni_validated = FALSE have restricted access
+     * - Only validated alumni (is_alumni_validated = TRUE) have full alumni privileges
      * 
      * @param string $requiredRole The minimum role required
      * @return bool True if user has required role or higher, false otherwise
@@ -870,6 +880,7 @@ class Auth {
         }
         
         $currentRole = $this->getUserRole();
+        $userId = $this->getUserId();
         
         // Validate required role
         if (!isset(self::ROLE_HIERARCHY[$requiredRole])) {
@@ -883,6 +894,25 @@ class Auth {
         
         // Check if current role meets or exceeds required role
         $hasPermission = $currentLevel >= $requiredLevel;
+        
+        // Additional check for alumni: must be validated to have access
+        if ($hasPermission && $currentRole === 'alumni') {
+            try {
+                $stmt = $this->pdo->prepare("SELECT is_alumni_validated FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // If alumni is not validated, deny access (treat as 'none' role)
+                if ($user && !$user['is_alumni_validated']) {
+                    $this->log("Permission denied: Alumni user ID {$userId} is not validated yet");
+                    $hasPermission = false;
+                }
+            } catch (PDOException $e) {
+                $this->log("Error checking alumni validation status: " . $e->getMessage());
+                // On error, deny access for safety
+                $hasPermission = false;
+            }
+        }
         
         if (!$hasPermission) {
             $this->log("Permission denied: User role '{$currentRole}' (level {$currentLevel}) insufficient for required role '{$requiredRole}' (level {$requiredLevel})");
@@ -901,7 +931,7 @@ class Auth {
     public function updateUserRole(int $userId, string $role): bool {
         try {
             // Validate role
-            $validRoles = ['none', 'mitglied', 'alumni', 'vorstand', 'ressortleiter', 'admin'];
+            $validRoles = ['none', 'alumni', 'mitglied', 'ressortleiter', '1v', '2v', '3v', 'vorstand', 'admin'];
             if (!in_array($role, $validRoles, true)) {
                 $this->log("Invalid role attempted: {$role} for user ID: {$userId}");
                 return false;
@@ -911,8 +941,10 @@ class Auth {
             $result = $stmt->execute([$role, $userId]);
             
             if ($result) {
-                // Update session role as well
-                $_SESSION['role'] = $role;
+                // Update session role as well if updating current user
+                if ($userId === $this->getUserId()) {
+                    $_SESSION['role'] = $role;
+                }
                 $this->log("Role updated to {$role} for user ID: {$userId}");
                 return true;
             }
@@ -920,6 +952,162 @@ class Auth {
             return false;
         } catch (PDOException $e) {
             $this->log("Error updating role: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Request alumni status transition for a user
+     * When a member requests alumni status:
+     * 1. Changes role to 'alumni'
+     * 2. Sets is_alumni_validated to FALSE (pending validation)
+     * 3. Records timestamp of request
+     * 4. Immediately revokes access to active project data
+     * 
+     * @param int $userId User ID requesting alumni status
+     * @return bool True on success, false on failure
+     */
+    public function requestAlumniStatus(int $userId): bool {
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE users 
+                SET role = 'alumni', 
+                    is_alumni_validated = 0, 
+                    alumni_status_requested_at = NOW() 
+                WHERE id = ?
+            ");
+            $result = $stmt->execute([$userId]);
+            
+            if ($result) {
+                // Update session if current user
+                if ($userId === $this->getUserId()) {
+                    $_SESSION['role'] = 'alumni';
+                }
+                
+                $this->log("Alumni status requested for user ID: {$userId}. Validation pending.");
+                
+                // Log to system logs if available
+                if ($this->systemLogger !== null) {
+                    $this->systemLogger->log($userId, 'request_alumni_status', 'users', $userId);
+                }
+                
+                return true;
+            }
+            
+            return false;
+        } catch (PDOException $e) {
+            $this->log("Error requesting alumni status: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Validate an alumni user's status
+     * Sets is_alumni_validated to TRUE, allowing full alumni privileges and profile visibility
+     * Only callable by admin or vorstand roles
+     * 
+     * @param int $alumniUserId User ID of the alumni to validate
+     * @param int $validatorUserId User ID of the admin/vorstand performing validation
+     * @return bool True on success, false on failure
+     */
+    public function validateAlumniStatus(int $alumniUserId, int $validatorUserId): bool {
+        try {
+            // Check if validator has permission (admin or vorstand)
+            $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
+            $stmt->execute([$validatorUserId]);
+            $validator = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$validator) {
+                $this->log("Validator user ID {$validatorUserId} not found");
+                return false;
+            }
+            
+            $validatorRole = $validator['role'];
+            $allowedRoles = ['admin', 'vorstand', '1v', '2v', '3v'];
+            
+            if (!in_array($validatorRole, $allowedRoles, true)) {
+                $this->log("Permission denied: User ID {$validatorUserId} (role: {$validatorRole}) cannot validate alumni");
+                return false;
+            }
+            
+            // Validate the alumni user
+            $stmt = $this->pdo->prepare("
+                UPDATE users 
+                SET is_alumni_validated = 1 
+                WHERE id = ? AND role = 'alumni'
+            ");
+            $result = $stmt->execute([$alumniUserId]);
+            
+            if ($result) {
+                $this->log("Alumni validated: User ID {$alumniUserId} validated by user ID {$validatorUserId}");
+                
+                // Log to system logs if available
+                if ($this->systemLogger !== null) {
+                    $this->systemLogger->log($validatorUserId, 'validate_alumni', 'users', $alumniUserId);
+                }
+                
+                return true;
+            }
+            
+            return false;
+        } catch (PDOException $e) {
+            $this->log("Error validating alumni status: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get all pending alumni validations
+     * Returns list of alumni users with is_alumni_validated = FALSE
+     * 
+     * @return array List of pending alumni users
+     */
+    public function getPendingAlumniValidations(): array {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    id, 
+                    email, 
+                    firstname, 
+                    lastname, 
+                    alumni_status_requested_at,
+                    created_at
+                FROM users 
+                WHERE role = 'alumni' AND is_alumni_validated = 0
+                ORDER BY alumni_status_requested_at DESC
+            ");
+            $stmt->execute();
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->log("Error fetching pending alumni validations: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Check if user is a validated alumni
+     * 
+     * @param int $userId User ID to check
+     * @return bool True if user is validated alumni, false otherwise
+     */
+    public function isValidatedAlumni(int $userId): bool {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT role, is_alumni_validated 
+                FROM users 
+                WHERE id = ?
+            ");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user) {
+                return false;
+            }
+            
+            return $user['role'] === 'alumni' && (bool)$user['is_alumni_validated'];
+        } catch (PDOException $e) {
+            $this->log("Error checking alumni validation status: " . $e->getMessage());
             return false;
         }
     }
