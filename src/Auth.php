@@ -1490,13 +1490,22 @@ class Auth {
             $mail->SMTPAuth   = true;
             $mail->Username   = SMTP_USER;
             $mail->Password   = SMTP_PASS;
-            $mail->SMTPSecure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
-            $mail->Port       = defined('SMTP_PORT') ? SMTP_PORT : 587;
+            $mail->SMTPSecure = defined('SMTP_SECURE') && constant('SMTP_SECURE') ? constant('SMTP_SECURE') : 'tls';
+            $mail->Port       = defined('SMTP_PORT') ? (int)constant('SMTP_PORT') : 587;
             $mail->CharSet    = 'UTF-8';
             
-            // Recipients
-            $fromEmail = defined('SMTP_FROM_EMAIL') && !empty(SMTP_FROM_EMAIL) ? SMTP_FROM_EMAIL : SMTP_USER;
-            $fromName = defined('SMTP_FROM_NAME') && !empty(SMTP_FROM_NAME) ? SMTP_FROM_NAME : 'IBC Intranet';
+            // Recipients - use SMTP_USER as fallback for from email
+            $fromEmail = SMTP_USER;
+            $fromName = 'IBC Intranet';
+            
+            if (defined('SMTP_FROM_EMAIL') && constant('SMTP_FROM_EMAIL') && !empty(constant('SMTP_FROM_EMAIL'))) {
+                $fromEmail = constant('SMTP_FROM_EMAIL');
+            }
+            
+            if (defined('SMTP_FROM_NAME') && constant('SMTP_FROM_NAME') && !empty(constant('SMTP_FROM_NAME'))) {
+                $fromName = constant('SMTP_FROM_NAME');
+            }
+            
             $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($email, "{$firstname} {$lastname}");
             

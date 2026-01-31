@@ -84,6 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             
             // Update email
             $response = $auth->updateEmail($userId, $newEmail, $password);
+            
+            // Include the new email in response for UI update
+            if ($response['success']) {
+                $response['new_email'] = $newEmail;
+            }
             break;
     }
     
@@ -591,8 +596,10 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     showToastLocal(data.message, 'success');
-                    // Update the displayed current email without page reload
-                    document.getElementById('currentEmail').value = document.getElementById('newEmail').value;
+                    // Update the displayed current email using the value from server response
+                    if (data.new_email) {
+                        document.getElementById('currentEmail').value = data.new_email;
+                    }
                     // Reset form on success
                     document.getElementById('newEmail').value = '';
                     document.getElementById('emailPassword').value = '';
