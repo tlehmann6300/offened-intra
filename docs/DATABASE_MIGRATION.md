@@ -154,8 +154,10 @@ Die folgenden Klassen sollten in Zukunft auf die Zwei-Datenbank-Architektur migr
 
 ## Sicherheit
 
-- Datenbank-Credentials sind in .env-Datei (nicht im Repository)
-- Fallback-Werte in config/db.php für Entwicklung
+- Datenbank-Credentials sollten in .env-Datei gespeichert werden (nicht im Repository)
+- Fallback-Werte in config/db.php sind die vom Kunden bereitgestellten Produktions-Credentials
+  - **WICHTIG**: Für zusätzliche Sicherheit sollten diese in einer .env-Datei überschrieben werden
+  - Die Fallback-Werte ermöglichen einen sofortigen Betrieb nach dem Deployment
 - SMTP-Passwörter werden nie im Code geloggt
 - Fehlerbehandlung ohne sensitive Daten in Ausgabe
 

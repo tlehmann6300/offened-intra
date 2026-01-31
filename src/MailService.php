@@ -76,8 +76,8 @@ class MailService {
             $mail->SMTPAuth   = true;
             $mail->Username   = SMTP_USER;
             $mail->Password   = SMTP_PASS;
-            $mail->SMTPSecure = defined('SMTP_SECURE') && constant('SMTP_SECURE') ? constant('SMTP_SECURE') : 'tls';
-            $mail->Port       = defined('SMTP_PORT') ? (int)constant('SMTP_PORT') : 587;
+            $mail->SMTPSecure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
+            $mail->Port       = defined('SMTP_PORT') ? (int)SMTP_PORT : 587;
             $mail->CharSet    = 'UTF-8';
             
             // Set from address and name

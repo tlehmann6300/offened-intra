@@ -17,6 +17,13 @@ class HelperService {
     private string $logFile;
     private ?MailService $mailService = null;
     
+    /**
+     * Constructor
+     * 
+     * @param PDO $pdoContent Content database connection (for event_helper tables)
+     * @param PDO $pdoUser User database connection (for users table)
+     * @param MailService|null $mailService Optional MailService instance for sending emails
+     */
     public function __construct(PDO $pdoContent, PDO $pdoUser, ?MailService $mailService = null) {
         $this->pdoContent = $pdoContent;
         $this->pdoUser = $pdoUser;
