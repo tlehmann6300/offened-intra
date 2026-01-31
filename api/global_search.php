@@ -12,7 +12,7 @@ declare(strict_types=1);
  * - Uses two separate database connections (User-DB and Content-DB)
  * - User-DB: users, alumni_profiles
  * - Content-DB: inventory, events, projects, news
- * - Results are merged in PHP and sorted by date
+ * - Results are merged in PHP and sorted by relevance score
  * 
  * Performance optimizations:
  * - Separate queries to each database to handle multi-database architecture
@@ -248,8 +248,62 @@ try {
     // ===========================================================================
     $allResults = array_merge($userResults, $contentResults);
     
-    // Sort all results by date DESC
+    // ===========================================================================
+    // STEP 4: Calculate relevance score for each result
+    // ===========================================================================
+    // Relevance scoring algorithm:
+    // - Exact match in title: +10 points
+    // - Partial match in title: +5 points
+    // - Match in subtitle: +3 points
+    // - Match in extra_info: +1 point
+    // - Case-insensitive matching
+    // - Recent items (within 30 days): +2 points bonus
+    // ===========================================================================
+    $searchLower = mb_strtolower($query);
+    
+    foreach ($allResults as $key => $result) {
+        $score = 0;
+        
+        // Check title relevance
+        $titleLower = mb_strtolower($result['title'] ?? '');
+        if ($titleLower === $searchLower) {
+            $score += 10; // Exact match in title
+        } elseif (strpos($titleLower, $searchLower) !== false) {
+            $score += 5; // Partial match in title
+        }
+        
+        // Check subtitle relevance
+        $subtitleLower = mb_strtolower($result['subtitle'] ?? '');
+        if (strpos($subtitleLower, $searchLower) !== false) {
+            $score += 3;
+        }
+        
+        // Check extra_info (description/bio) relevance
+        $extraInfoLower = mb_strtolower($result['extra_info'] ?? '');
+        if (strpos($extraInfoLower, $searchLower) !== false) {
+            $score += 1;
+        }
+        
+        // Bonus for recent items (within 30 days)
+        if (!empty($result['date'])) {
+            $itemDate = strtotime($result['date']);
+            $daysSinceCreation = (time() - $itemDate) / (60 * 60 * 24);
+            if ($daysSinceCreation <= 30) {
+                $score += 2;
+            }
+        }
+        
+        // Store score with the result
+        $allResults[$key]['relevance_score'] = $score;
+    }
+    
+    // Sort all results by relevance score (DESC), then by date (DESC) as tiebreaker
     usort($allResults, function($a, $b) {
+        // Primary sort: by relevance score (higher is better)
+        if ($a['relevance_score'] !== $b['relevance_score']) {
+            return $b['relevance_score'] - $a['relevance_score'];
+        }
+        // Secondary sort: by date (newer is better)
         return strtotime($b['date']) - strtotime($a['date']);
     });
     
