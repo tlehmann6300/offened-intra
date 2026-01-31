@@ -268,28 +268,30 @@ try {
         $titleLower = mb_strtolower($result['title'] ?? '');
         if ($titleLower === $searchLower) {
             $score += 10; // Exact match in title
-        } elseif (strpos($titleLower, $searchLower) !== false) {
+        } elseif (mb_strpos($titleLower, $searchLower) !== false) {
             $score += 5; // Partial match in title
         }
         
         // Check subtitle relevance
         $subtitleLower = mb_strtolower($result['subtitle'] ?? '');
-        if (strpos($subtitleLower, $searchLower) !== false) {
+        if (mb_strpos($subtitleLower, $searchLower) !== false) {
             $score += 3;
         }
         
         // Check extra_info (description/bio) relevance
         $extraInfoLower = mb_strtolower($result['extra_info'] ?? '');
-        if (strpos($extraInfoLower, $searchLower) !== false) {
+        if (mb_strpos($extraInfoLower, $searchLower) !== false) {
             $score += 1;
         }
         
         // Bonus for recent items (within 30 days)
         if (!empty($result['date'])) {
             $itemDate = strtotime($result['date']);
-            $daysSinceCreation = (time() - $itemDate) / (60 * 60 * 24);
-            if ($daysSinceCreation <= 30) {
-                $score += 2;
+            if ($itemDate !== false) {
+                $daysSinceCreation = (time() - $itemDate) / (60 * 60 * 24);
+                if ($daysSinceCreation <= 30) {
+                    $score += 2;
+                }
             }
         }
         
