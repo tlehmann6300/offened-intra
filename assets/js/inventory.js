@@ -112,6 +112,16 @@ function resetFilters() {
         searchInput.value = '';
     }
     
+    // Reset location filters (both desktop and mobile)
+    const locationFilter = document.getElementById('locationFilter');
+    const locationFilterMobile = document.getElementById('locationFilterMobile');
+    if (locationFilter) {
+        locationFilter.value = 'all';
+    }
+    if (locationFilterMobile) {
+        locationFilterMobile.value = 'all';
+    }
+    
     // Reset all filter pills to 'all'
     const filterPills = document.querySelectorAll('.filter-pill');
     filterPills.forEach(pill => {
@@ -730,6 +740,9 @@ function adjustQuantity(itemId, adjustment, buttonElement) {
     .then(data => {
         if (data.success) {
             updateInventoryCardUI(itemId, data.newQuantity);
+            // Show success toast notification
+            const adjustmentText = adjustment > 0 ? `+${adjustment}` : `${adjustment}`;
+            showToast(`Menge aktualisiert (${adjustmentText})`, 'success');
         } else {
             showToast('Fehler: ' + (data.message || 'Unbekannter Fehler'), 'danger');
         }

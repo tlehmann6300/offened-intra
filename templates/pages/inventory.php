@@ -419,8 +419,17 @@ if (!is_array($allCategories)) {
             <?php endif; ?>
         </div>
 
-        <!-- Filter Pills for Categories, Locations, and Status -->
-        <div class="row mb-4">
+        <!-- Mobile Filter Button (only visible on mobile) -->
+        <div class="row mb-3 d-md-none">
+            <div class="col-12">
+                <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas" aria-controls="filterOffcanvas">
+                    <i class="fas fa-filter me-2"></i>Filter anzeigen
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Pills for Categories, Locations, and Status (Desktop only) -->
+        <div class="row mb-4 d-none d-md-flex" id="desktopFilters">
         <div class="col-12 mb-3">
             <h6 class="text-muted mb-2">Kategorie filtern:</h6>
             <div class="filter-pills" role="group" aria-label="Kategorie-Filter">
@@ -447,7 +456,7 @@ if (!is_array($allCategories)) {
         
         <div class="col-md-6 mb-3">
             <h6 class="text-muted mb-2">Standort filtern:</h6>
-            <select class="form-select form-select-lg" id="locationFilter" aria-label="Standort filtern" style="min-height: 44px;">
+            <select class="form-select form-select-lg form-select-touch" id="locationFilter" aria-label="Standort filtern">
                 <option value="all" selected>Alle Standorte</option>
                 <option value="Keller vorne H-1.87">Keller vorne H-1.87</option>
                 <option value="Keller hinten H-1.88">Keller hinten H-1.88</option>
@@ -653,7 +662,7 @@ if (!is_array($allCategories)) {
                                 <div class="mobile-quantity-controls d-lg-none mt-3 mb-3">
                                     <div class="d-flex align-items-center justify-content-center gap-3">
                                         <button type="button" 
-                                                class="btn btn-lg btn-outline-danger quantity-btn" 
+                                                class="btn btn-lg btn-outline-danger quantity-btn btn-touch" 
                                                 data-action="adjust-quantity"
                                                 data-item-id="<?php echo $item['id']; ?>"
                                                 data-adjustment="-1"
@@ -665,7 +674,7 @@ if (!is_array($allCategories)) {
                                             <?php echo $item['quantity']; ?>
                                         </span>
                                         <button type="button" 
-                                                class="btn btn-lg btn-outline-success quantity-btn" 
+                                                class="btn btn-lg btn-outline-success quantity-btn btn-touch" 
                                                 data-action="adjust-quantity"
                                                 data-item-id="<?php echo $item['id']; ?>"
                                                 data-adjustment="1"
@@ -673,11 +682,10 @@ if (!is_array($allCategories)) {
                                             <i class="fas fa-plus"></i>
                                         </button>
                                         <button type="button" 
-                                                class="btn btn-outline-info" 
+                                                class="btn btn-outline-info btn-touch" 
                                                 data-action="quantity-comment"
                                                 data-item-id="<?php echo $item['id']; ?>"
-                                                title="Änderung mit Kommentar"
-                                                style="min-width: 44px; min-height: 44px;">
+                                                title="Änderung mit Kommentar">
                                             <i class="fas fa-comment"></i>
                                         </button>
                                     </div>
@@ -849,6 +857,85 @@ if (!is_array($allCategories)) {
 </div>
 <?php endif; ?>
 
+<!-- Filter Offcanvas (Mobile) -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="filterOffcanvas" aria-labelledby="filterOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="filterOffcanvasLabel">
+            <i class="fas fa-filter me-2"></i>Filter
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Schließen"></button>
+    </div>
+    <div class="offcanvas-body">
+        <!-- Category Filter -->
+        <div class="mb-4">
+            <h6 class="text-muted mb-2">Kategorie filtern:</h6>
+            <div class="filter-pills" role="group" aria-label="Kategorie-Filter">
+                <span class="filter-pill active" data-filter-type="category" data-value="all" tabindex="0" role="button">
+                    <i class="fas fa-list me-1"></i> Alle
+                </span>
+                <span class="filter-pill" data-filter-type="category" data-value="technik" tabindex="0" role="button">
+                    <i class="fas fa-laptop me-1"></i> Technik
+                </span>
+                <span class="filter-pill" data-filter-type="category" data-value="marketing" tabindex="0" role="button">
+                    <i class="fas fa-bullhorn me-1"></i> Marketing
+                </span>
+                <span class="filter-pill" data-filter-type="category" data-value="buero" tabindex="0" role="button">
+                    <i class="fas fa-building me-1"></i> Büro
+                </span>
+                <span class="filter-pill" data-filter-type="category" data-value="veranstaltung" tabindex="0" role="button">
+                    <i class="fas fa-calendar-alt me-1"></i> Veranstaltung
+                </span>
+                <span class="filter-pill" data-filter-type="category" data-value="sonstiges" tabindex="0" role="button">
+                    <i class="fas fa-box me-1"></i> Sonstiges
+                </span>
+            </div>
+        </div>
+        
+        <!-- Location Filter -->
+        <div class="mb-4">
+            <h6 class="text-muted mb-2">Standort filtern:</h6>
+            <select class="form-select form-select-lg form-select-touch" id="locationFilterMobile" aria-label="Standort filtern">
+                <option value="all" selected>Alle Standorte</option>
+                <option value="Keller vorne H-1.87">Keller vorne H-1.87</option>
+                <option value="Keller hinten H-1.88">Keller hinten H-1.88</option>
+                <?php foreach ($allLocations as $location): ?>
+                    <?php if ($location !== 'Keller vorne H-1.87' && $location !== 'Keller hinten H-1.88'): ?>
+                        <option value="<?php echo htmlspecialchars($location, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($location, ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        
+        <!-- Status Filter -->
+        <div class="mb-4">
+            <h6 class="text-muted mb-2">Status filtern:</h6>
+            <div class="filter-pills" role="group" aria-label="Status-Filter">
+                <span class="filter-pill active" data-filter-type="status" data-value="all" tabindex="0" role="button">
+                    <i class="fas fa-circle me-1"></i> Alle Status
+                </span>
+                <span class="filter-pill" data-filter-type="status" data-value="active" tabindex="0" role="button">
+                    <i class="fas fa-check-circle text-success me-1"></i> Aktiv
+                </span>
+                <span class="filter-pill" data-filter-type="status" data-value="broken" tabindex="0" role="button">
+                    <i class="fas fa-times-circle text-danger me-1"></i> Defekt
+                </span>
+                <span class="filter-pill" data-filter-type="status" data-value="archived" tabindex="0" role="button">
+                    <i class="fas fa-archive text-secondary me-1"></i> Archiviert
+                </span>
+            </div>
+        </div>
+
+        <!-- Reset Button -->
+        <div class="d-grid">
+            <button type="button" class="btn btn-outline-secondary" onclick="resetFilters()">
+                <i class="fas fa-undo me-2"></i>Filter zurücksetzen
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Back to Top Button -->
 <button id="inventoryBackToTop" class="btn btn-primary back-to-top-btn" 
         onclick="scrollToTop()" 
@@ -1006,14 +1093,62 @@ if (!is_array($allCategories)) {
         padding-right: 0.5rem;
     }
 }
+
+/* Offcanvas styling */
+.offcanvas {
+    backdrop-filter: blur(10px);
+}
+
+.offcanvas-body .filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.offcanvas-body .filter-pill {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.offcanvas-body .filter-pill:hover {
+    background: rgba(108, 92, 231, 0.1);
+    border-color: rgba(108, 92, 231, 0.5);
+}
+
+.offcanvas-body .filter-pill.active {
+    background: rgba(108, 92, 231, 0.9);
+    color: white;
+    border-color: rgba(108, 92, 231, 1);
+}
+
+/* Touch-friendly button sizes */
+.btn-touch {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.form-select-touch {
+    min-height: 44px;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const locationFilter = document.getElementById('locationFilter');
+    const locationFilterMobile = document.getElementById('locationFilterMobile');
+    
+    // Desktop location filter handler
     if (locationFilter) {
         locationFilter.addEventListener('change', function() {
             const value = this.value;
+            // Sync mobile filter
+            if (locationFilterMobile) {
+                locationFilterMobile.value = value;
+            }
             // Use the existing applyFilter function from main.js
             if (typeof applyFilter === 'function') {
                 // Create a temporary element to pass to applyFilter
@@ -1024,6 +1159,57 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Mobile location filter handler
+    if (locationFilterMobile) {
+        locationFilterMobile.addEventListener('change', function() {
+            const value = this.value;
+            // Sync desktop filter
+            if (locationFilter) {
+                locationFilter.value = value;
+            }
+            // Use the existing applyFilter function from main.js
+            if (typeof applyFilter === 'function') {
+                // Create a temporary element to pass to applyFilter
+                const tempElement = document.createElement('div');
+                tempElement.setAttribute('data-filter-type', 'location');
+                tempElement.setAttribute('data-value', value);
+                applyFilter('location', value, tempElement);
+            }
+        });
+    }
+    
+    // Sync filter pills between desktop and mobile offcanvas
+    const syncFilterPills = function() {
+        const desktopPills = document.querySelectorAll('#desktopFilters .filter-pill');
+        const mobilePills = document.querySelectorAll('#filterOffcanvas .filter-pill');
+        
+        // When a filter pill is clicked, sync with corresponding pill
+        const handlePillClick = function(e) {
+            const clickedPill = e.target.closest('.filter-pill');
+            if (!clickedPill) return;
+            
+            const filterType = clickedPill.getAttribute('data-filter-type');
+            const value = clickedPill.getAttribute('data-value');
+            
+            // Sync all pills with same filter type and value
+            document.querySelectorAll(`.filter-pill[data-filter-type="${filterType}"]`).forEach(pill => {
+                if (pill.getAttribute('data-value') === value) {
+                    pill.classList.add('active');
+                } else if (pill.getAttribute('data-filter-type') === filterType) {
+                    pill.classList.remove('active');
+                }
+            });
+        };
+        
+        // Add click listeners to all filter pills
+        document.querySelectorAll('.filter-pill').forEach(pill => {
+            pill.addEventListener('click', handlePillClick);
+        });
+    };
+    
+    // Initialize filter pill sync
+    syncFilterPills();
 });
 </script>
 
