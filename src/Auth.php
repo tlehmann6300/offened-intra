@@ -891,6 +891,10 @@ class Auth {
      * New hierarchy as per requirement:
      * Admin/1V-3V/Alumni-Vorstand > Ressortleiter > Mitglied > Alumni
      * 
+     * Note: alumni-vorstand and 1v share the same hierarchy level (7) as they
+     * both have equivalent super-admin privileges with wildcard permissions.
+     * Hierarchy is used for >= comparisons, so equal levels work correctly.
+     * 
      * @var array<string, int>
      */
     private const ROLE_HIERARCHY = [
