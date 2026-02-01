@@ -30,13 +30,16 @@ require_once BASE_PATH . '/src/Auth.php';
 require_once BASE_PATH . '/src/SystemLogger.php';
 
 try {
+    // Use global database connections from config/db.php
+    // $userPdo - User Database (Benutzer, Alumni-Profile, Authentication)
+    // $contentPdo - Content Database (Projekte, Inventar, Events, News, System Logs)
+    global $userPdo, $contentPdo;
+    
     // Initialize core services
     // Note: SystemLogger uses Content DB as it primarily logs content-related actions
     // Auth uses User DB as it handles user authentication
-    $pdoContent = DatabaseManager::getContentConnection();
-    $pdoUser = DatabaseManager::getUserConnection();
-    $systemLogger = new SystemLogger($pdoContent);
-    $auth = new Auth($pdoUser, $systemLogger);
+    $systemLogger = new SystemLogger($contentPdo);
+    $auth = new Auth($userPdo, $systemLogger);
     
     // Check if user is logged in
     if (!$auth->isLoggedIn()) {
@@ -150,7 +153,7 @@ try {
         ORDER BY u.created_at DESC
     ";
     
-    $stmtUser = $pdoUser->prepare($sqlUserDb);
+    $stmtUser = $userPdo->prepare($sqlUserDb);
     for ($i = 1; $i <= 5; $i++) {
         $stmtUser->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
     }
@@ -236,7 +239,7 @@ try {
         ORDER BY date DESC
     ";
     
-    $stmtContent = $pdoContent->prepare($sqlContentDb);
+    $stmtContent = $contentPdo->prepare($sqlContentDb);
     for ($i = 1; $i <= 13; $i++) {
         $stmtContent->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
     }
