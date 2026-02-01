@@ -1,16 +1,13 @@
 <?php
 /**
  * Inventory Configuration Management Page
- * Only accessible for roles: admin, vorstand, ressortleiter
+ * Only accessible for roles with full access (admin, vorstand, 1V, 2V, 3V)
  * 
  * Allows managing locations and categories for the inventory system
  */
 
 // Check if user has permission to access this page
-$userRole = $auth->getUserRole();
-$allowedRoles = ['admin', 'vorstand', 'ressortleiter'];
-
-if (!in_array($userRole, $allowedRoles, true)) {
+if (!$auth->hasFullAccess()) {
     header('Location: index.php?page=home');
     exit;
 }

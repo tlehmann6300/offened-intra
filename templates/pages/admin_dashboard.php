@@ -11,10 +11,7 @@
  */
 
 // Check if user has permission to access this page
-$userRole = $auth->getUserRole();
-$allowedRoles = ['admin', 'vorstand', 'ressortleiter'];
-
-if (!in_array($userRole, $allowedRoles, true)) {
+if (!$auth->hasAdminAccess()) {
     header('Location: index.php?page=home');
     exit;
 }

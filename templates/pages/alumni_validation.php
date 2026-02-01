@@ -1,7 +1,7 @@
 <?php
 /**
  * Alumni Validation Interface
- * Only accessible for roles: admin, vorstand (including 1V, 2V, 3V)
+ * Only accessible for roles with full access (admin, vorstand, 1V, 2V, 3V)
  * 
  * Features:
  * - List of pending alumni validations (is_alumni_validated = FALSE)
@@ -11,10 +11,7 @@
  */
 
 // Check if user has permission to access this page
-$userRole = $auth->getUserRole();
-$allowedRoles = ['admin', 'vorstand', '1v', '2v', '3v'];
-
-if (!in_array($userRole, $allowedRoles, true)) {
+if (!$auth->hasFullAccess()) {
     header('Location: index.php?page=home');
     exit;
 }

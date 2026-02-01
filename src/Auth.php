@@ -865,6 +865,25 @@ class Auth {
     }
     
     /**
+     * Check if the current user has access to admin areas
+     * This includes full access roles and department leaders (ressortleiter)
+     * 
+     * @return bool True if user has admin area access, false otherwise
+     */
+    public function hasAdminAccess(): bool {
+        $role = $this->getUserRole();
+        
+        // If no role or role is 'none', deny access
+        if (!$role || $role === 'none') {
+            return false;
+        }
+        
+        // Admin area access: full access roles or ressortleiter
+        $adminRoles = ['admin', 'vorstand', '1v', '2v', '3v', 'ressortleiter'];
+        return in_array($role, $adminRoles, true);
+    }
+    
+    /**
      * Role hierarchy definition (higher number = more privileges)
      * This constant makes it easier to maintain and modify role hierarchies
      * 
