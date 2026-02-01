@@ -104,8 +104,8 @@ $displayName = getUserDisplayName();
             <div class="collapse navbar-collapse" id="navbarNav">
                 <?php if ($auth->isLoggedIn()): ?>
                     <?php 
-                    // Get current page for active link highlighting
-                    $currentPage = $_GET['page'] ?? 'home';
+                    // Get current page for active link highlighting (from sanitized $page variable)
+                    $currentPage = $page ?? 'home';
                     ?>
                     <!-- Left Navigation (Logged In Users) -->
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -332,9 +332,7 @@ $displayName = getUserDisplayName();
                     'newsroom' => ['News', 'fas fa-newspaper'],
                 ];
                 
-                // Get current page
-                $currentPage = $_GET['page'] ?? 'home';
-                
+                // Use the already defined $currentPage variable (set at line 108)
                 if (isset($breadcrumbMap[$currentPage])) {
                     $breadcrumb = $breadcrumbMap[$currentPage];
                     $mainTitle = $breadcrumb[0];
