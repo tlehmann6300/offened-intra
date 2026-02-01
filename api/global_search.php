@@ -100,6 +100,7 @@ try {
     $searchTerm = '%' . $query . '%';
     
     // Type label mapping for result categorization
+    // Note: Keys use English database type names, values are German display labels
     $typeLabels = [
         'inventory' => '[Inventar]',
         'user' => '[Person]',
@@ -327,8 +328,13 @@ try {
         if ($a['relevance_score'] !== $b['relevance_score']) {
             return $b['relevance_score'] - $a['relevance_score'];
         }
-        // Secondary sort: by date (newer is better)
-        return strtotime($b['date']) - strtotime($a['date']);
+        // Secondary sort: by date (newer is better) - use comparison instead of subtraction
+        $dateA = strtotime($a['date']);
+        $dateB = strtotime($b['date']);
+        if ($dateA === $dateB) {
+            return 0;
+        }
+        return ($dateA < $dateB) ? 1 : -1;
     });
     
     // Group results by type
