@@ -14,7 +14,9 @@ This guide will help you set up the IBC-Intra application from a fresh clone.
 
 After cloning the repository, follow these steps:
 
-### 1. Install Composer Dependencies
+### 1. Install Composer Dependencies (CRITICAL - Required for Login)
+
+**Important:** The application will not load without these dependencies. You must run this command first!
 
 ```bash
 composer install --no-dev --optimize-autoloader
@@ -24,6 +26,8 @@ This will install required packages:
 - phpmailer/phpmailer (Email functionality)
 - vlucas/phpdotenv (Environment configuration)
 - sonata-project/google-authenticator (2FA support)
+
+**Without these dependencies, the website will show a maintenance page and login will not work.**
 
 ### 2. Install Node.js Dependencies and Build Assets
 
