@@ -212,6 +212,41 @@ function getErrorStateTemplate() {
  * @return {string} HTML template for empty state
  */
 function getEmptyStateTemplate(hasFilters) {
+    // Build specific message based on active filters
+    let filterMessage = '';
+    if (hasFilters) {
+        const filterParts = [];
+        
+        if (currentFilters.search) {
+            filterParts.push(`Suchbegriff "${currentFilters.search}"`);
+        }
+        if (currentFilters.category !== 'all') {
+            // Get the category name from the select element for display
+            const categorySelect = document.getElementById('categoryFilter');
+            const categoryOption = categorySelect?.querySelector(`option[value="${currentFilters.category}"]`);
+            const categoryName = categoryOption?.textContent || currentFilters.category;
+            filterParts.push(`Kategorie "${categoryName}"`);
+        }
+        if (currentFilters.location !== 'all') {
+            // Get the location name from the select element for display
+            const locationSelect = document.getElementById('locationFilter');
+            const locationOption = locationSelect?.querySelector(`option[value="${currentFilters.location}"]`);
+            const locationName = locationOption?.textContent || currentFilters.location;
+            filterParts.push(`Standort "${locationName}"`);
+        }
+        if (currentFilters.status !== 'all') {
+            // Get the status name from the select element for display
+            const statusSelect = document.getElementById('statusFilter');
+            const statusOption = statusSelect?.querySelector(`option[value="${currentFilters.status}"]`);
+            const statusName = statusOption?.textContent || currentFilters.status;
+            filterParts.push(`Status "${statusName}"`);
+        }
+        
+        if (filterParts.length > 0) {
+            filterMessage = `Keine Gegenstände gefunden für: ${filterParts.join(', ')}.`;
+        }
+    }
+    
     return `
         <div class="col-12">
             <div class="card glass-card text-center py-5 px-4" style="max-width: 600px; margin: 0 auto;">
@@ -222,7 +257,7 @@ function getEmptyStateTemplate(hasFilters) {
                     <h3 class="mb-3">Keine Gegenstände gefunden</h3>
                     ${hasFilters ? `
                         <p class="text-muted mb-4">
-                            Ihre Suche oder Filter ergab keine Treffer. 
+                            ${filterMessage || 'Ihre Suche oder Filter ergab keine Treffer.'}<br>
                             Versuchen Sie andere Suchbegriffe oder setzen Sie die Filter zurück.
                         </p>
                         <button type="button" class="btn btn-primary btn-lg" id="resetFiltersBtn">
@@ -360,6 +395,18 @@ function showSkeletonLoaders(container, count = 8) {
     }
     
     container.innerHTML = skeletonCards.join('');
+}
+
+/**
+ * Show inventory skeletons during AJAX loading
+ * Displays 6 gray placeholder cards with pulse animation
+ * This is the main function for showing loading state in the inventory module
+ */
+function showInventorySkeletons() {
+    const inventoryContainer = document.getElementById('inventoryContainer');
+    if (inventoryContainer) {
+        showSkeletonLoaders(inventoryContainer, 6);
+    }
 }
 
 /**
