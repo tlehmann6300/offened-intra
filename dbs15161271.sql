@@ -188,6 +188,27 @@ CREATE TABLE IF NOT EXISTS `news` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
 COMMENT='News und Ankündigungen';
 
+-- ---------------------------------------------------------------------
+-- Tabelle: system_logs
+-- Beschreibung: System-Logs für administrative Aktionen
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `system_logs` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL COMMENT 'Benutzer, der die Aktion durchgeführt hat (Referenz auf User-DB users.id)',
+  `action` VARCHAR(100) NOT NULL COMMENT 'Aktionstyp (create, update, delete)',
+  `target_type` VARCHAR(100) NOT NULL COMMENT 'Zieltyp (inventory, news, alumni, project, event)',
+  `target_id` INT(11) NOT NULL COMMENT 'ID des Zielobjekts',
+  `details` TEXT NULL COMMENT 'Zusätzliche Details zur Aktion (JSON)',
+  `ip_address` VARCHAR(45) NULL COMMENT 'IP-Adresse des Benutzers',
+  `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_action` (`action`),
+  KEY `idx_target_type` (`target_type`),
+  KEY `idx_timestamp` (`timestamp`),
+  KEY `idx_target_type_id` (`target_type`, `target_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='System-Logs für administrative Aktionen';
+
 -- =====================================================================
 -- TEST-DATEN / DUMP DATA
 -- =====================================================================
@@ -265,7 +286,7 @@ INSERT INTO `events` (
   `location` = VALUES(`location`);
 
 -- ---------------------------------------------------------------------
--- Helfer-Slots für Sommerfest (mindestens 2 Slots wie gefordert)
+-- Helfer-Slots für Sommerfest
 -- ---------------------------------------------------------------------
 
 INSERT INTO `event_helper_slots` (
@@ -414,39 +435,3 @@ INSERT INTO `news` (
 -- =====================================================================
 -- ENDE DER CONTENT-DATENBANK SETUP
 -- =====================================================================
-
--- ---------------------------------------------------------------------
--- HINWEISE ZUR VERWENDUNG
--- ---------------------------------------------------------------------
--- 
--- 1. Cross-Database-Referenzen:
---    - Felder wie created_by, author_id, user_id, responsible_user_id
---      und project_lead_id verweisen auf users.id in der User-Datenbank
---      (dbs15253086)
---    - Diese Referenzen sind logisch, aber nicht durch Foreign Keys
---      erzwungen (verschiedene Datenbank-Hosts)
---    - Referenzielle Integrität muss in der Anwendungslogik
---      sichergestellt werden
--- 
--- 2. Test-Daten:
---    - Alle Test-Daten verwenden user_id=1 (Tom Lehmann aus User-DB)
---    - Dies funktioniert nur, wenn die User-Datenbank bereits
---      eingerichtet wurde
--- 
--- 3. Datentypen:
---    - DECIMAL(10,2) für Preise und Budgets (Euro-Format)
---    - DATETIME für Event-Datum mit Uhrzeit
---    - TIMESTAMP für created_at/updated_at (automatisch)
---    - BOOLEAN für Flags (TRUE/FALSE statt 1/0)
---    - ENUM für Status-Felder mit vordefinierten Werten
--- 
--- 4. Inventar-System:
---    - Kategorien: Getränke, Becher, Kostüme, Tische (wie gefordert)
---    - Standorte: Hauptlager, Büro, Eventlager, Externe Lagerung
---    - Preise werden als DECIMAL gespeichert
--- 
--- 5. Event-System:
---    - Sommerfest mit 3 Helfer-Slots (Catering, Aufbau, Abbau)
---    - Helfer können sich über event_helper_registrations anmelden
--- 
--- ---------------------------------------------------------------------
