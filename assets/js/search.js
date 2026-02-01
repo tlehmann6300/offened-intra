@@ -186,8 +186,9 @@ function displaySearchResults(results, counts, total, instance, resultsContainer
                 const quantityBadge = item.quantity > 0 
                     ? `<span class="badge bg-success ms-2">${item.quantity}x</span>` 
                     : `<span class="badge bg-secondary ms-2">0x</span>`;
+                const typeLabel = item.typeLabel ? `<span class="badge bg-primary me-2">${escapeHtml(item.typeLabel)}</span>` : '';
                 html += `<a href="${escapeHtml(item.url)}" class="dropdown-item">
-                    <div class="fw-bold">${escapeHtml(item.title)} ${quantityBadge}</div>
+                    <div class="fw-bold">${typeLabel}${escapeHtml(item.title)} ${quantityBadge}</div>
                     <small class="text-muted">${escapeHtml(item.subtitle)}</small>
                 </a>`;
             });
@@ -198,8 +199,9 @@ function displaySearchResults(results, counts, total, instance, resultsContainer
         if (results.user && results.user.length > 0) {
             html += '<h6 class="dropdown-header"><i class="fas fa-user-graduate me-2"></i>Personen (' + counts.user + ')</h6>';
             results.user.forEach(item => {
+                const typeLabel = item.typeLabel ? `<span class="badge bg-info me-2">${escapeHtml(item.typeLabel)}</span>` : '';
                 html += `<a href="${escapeHtml(item.url)}" class="dropdown-item">
-                    <div class="fw-bold">${escapeHtml(item.title)}</div>
+                    <div class="fw-bold">${typeLabel}${escapeHtml(item.title)}</div>
                     <small class="text-muted">${escapeHtml(item.subtitle)}</small>
                 </a>`;
             });
@@ -210,8 +212,9 @@ function displaySearchResults(results, counts, total, instance, resultsContainer
         if (results.news && results.news.length > 0) {
             html += '<h6 class="dropdown-header"><i class="fas fa-newspaper me-2"></i>News (' + counts.news + ')</h6>';
             results.news.forEach(item => {
+                const typeLabel = item.typeLabel ? `<span class="badge bg-warning me-2">${escapeHtml(item.typeLabel)}</span>` : '';
                 html += `<a href="${escapeHtml(item.url)}" class="dropdown-item">
-                    <div class="fw-bold">${escapeHtml(item.title)}</div>
+                    <div class="fw-bold">${typeLabel}${escapeHtml(item.title)}</div>
                     <small class="text-muted">${escapeHtml(item.subtitle)} · ${formatDate(item.date)}</small>
                 </a>`;
             });
@@ -222,8 +225,9 @@ function displaySearchResults(results, counts, total, instance, resultsContainer
         if (results.event && results.event.length > 0) {
             html += '<h6 class="dropdown-header"><i class="fas fa-calendar-alt me-2"></i>Events (' + counts.event + ')</h6>';
             results.event.forEach(item => {
+                const typeLabel = item.typeLabel ? `<span class="badge bg-success me-2">${escapeHtml(item.typeLabel)}</span>` : '';
                 html += `<a href="${escapeHtml(item.url)}" class="dropdown-item">
-                    <div class="fw-bold">${escapeHtml(item.title)}</div>
+                    <div class="fw-bold">${typeLabel}${escapeHtml(item.title)}</div>
                     <small class="text-muted">${escapeHtml(item.subtitle)} · ${formatDate(item.date)}</small>
                 </a>`;
             });
@@ -234,8 +238,9 @@ function displaySearchResults(results, counts, total, instance, resultsContainer
         if (results.project && results.project.length > 0) {
             html += '<h6 class="dropdown-header"><i class="fas fa-briefcase me-2"></i>Projekte (' + counts.project + ')</h6>';
             results.project.forEach(item => {
+                const typeLabel = item.typeLabel ? `<span class="badge bg-secondary me-2">${escapeHtml(item.typeLabel)}</span>` : '';
                 html += `<a href="${escapeHtml(item.url)}" class="dropdown-item">
-                    <div class="fw-bold">${escapeHtml(item.title)}</div>
+                    <div class="fw-bold">${typeLabel}${escapeHtml(item.title)}</div>
                     <small class="text-muted">${escapeHtml(item.subtitle)} · ${formatDate(item.date)}</small>
                 </a>`;
             });
