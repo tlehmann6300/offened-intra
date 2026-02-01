@@ -143,9 +143,11 @@ To verify the implementation works correctly under concurrent load, you can:
 ## Security Benefits
 
 1. **Data Integrity**: Prevents incorrect stock levels from concurrent modifications
-2. **Audit Trail**: All changes are logged with user ID and timestamp
+2. **Dual Audit Trail**: All changes are logged in both `inventory_logs` and `system_logs` tables
+   - `inventory_logs`: Detailed technical change log with item_id, user_id, change_amount, and comment
+   - `system_logs`: Administrative audit log with human-readable German messages ('User [ID] hat Bestand von [Item] um [Anzahl] geändert')
 3. **Negative Stock Prevention**: Validates that operations don't result in negative inventory
-4. **Transaction Safety**: All-or-nothing execution prevents partial updates
+4. **Transaction Safety**: All-or-nothing execution prevents partial updates (quantity + both logs)
 5. **Isolation**: Each operation sees a consistent view of the data
 
 ## References
@@ -153,3 +155,4 @@ To verify the implementation works correctly under concurrent load, you can:
 - [MySQL SELECT ... FOR UPDATE Documentation](https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html)
 - [PDO Transactions Documentation](https://www.php.net/manual/en/pdo.transactions.php)
 - [Database Transaction Isolation Levels](https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html)
+- [Implementation Details](INVENTORY_ADJUSTMENT_OPTIMIZATION.md) - Complete documentation of the optimization
