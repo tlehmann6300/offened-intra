@@ -324,9 +324,9 @@ try {
     
     // Sort all results by relevance score (DESC), then by date (DESC) as tiebreaker
     usort($allResults, function($a, $b) {
-        // Primary sort: by relevance score (higher is better)
+        // Primary sort: by relevance score (higher is better) - use comparison operators
         if ($a['relevance_score'] !== $b['relevance_score']) {
-            return $b['relevance_score'] - $a['relevance_score'];
+            return ($a['relevance_score'] < $b['relevance_score']) ? 1 : -1;
         }
         // Secondary sort: by date (newer is better) - use comparison instead of subtraction
         $dateA = strtotime($a['date']);
@@ -370,7 +370,13 @@ try {
         }
         
         // Get type label for display using mapping
-        $typeLabel = $typeLabels[$type] ?? '';
+        if (!isset($typeLabels[$type])) {
+            // Log unexpected type for debugging
+            error_log("Global Search: Unexpected result type encountered: " . $type);
+            $typeLabel = '[Unknown]';
+        } else {
+            $typeLabel = $typeLabels[$type];
+        }
         
         // Add to grouped results with explicit type label
         $groupedResults[$type][] = [
