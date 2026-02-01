@@ -393,153 +393,172 @@ if (!is_array($allCategories)) {
         </div>
     </div>
 
-    <!-- Search Bar and Add Button - Sticky Filter Bar -->
-    <div class="sticky-filter-bar">
-        <div class="row mb-4">
-            <div class="col-md-8 mb-3 mb-md-0">
-                <div class="input-group search-form">
-                    <input type="text" class="form-control" id="liveSearchInput" placeholder="Nach Name, Ort oder Tags suchen..." value="<?php echo htmlspecialchars($search ?? '', ENT_QUOTES, 'UTF-8'); ?>" aria-label="Suche nach Inventar">
-                    <span class="input-group-text bg-white border-start-0" id="searchSpinner" style="display: none;">
-                        <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
-                    </span>
-                </div>
-                <small class="text-muted">Die Ergebnisse werden während der Eingabe automatisch aktualisiert</small>
+    <!-- Search Bar and Add Button -->
+    <div class="row mb-4">
+        <div class="col-md-8 mb-3 mb-md-0">
+            <div class="input-group search-form">
+                <input type="text" class="form-control" id="liveSearchInput" placeholder="Nach Name, Ort oder Tags suchen..." value="<?php echo htmlspecialchars($search ?? '', ENT_QUOTES, 'UTF-8'); ?>" aria-label="Suche nach Inventar">
+                <span class="input-group-text bg-white border-start-0" id="searchSpinner" style="display: none;">
+                    <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                </span>
             </div>
-            <?php if ($canEdit): ?>
-                <div class="col-md-4 text-md-end">
-                    <button type="button" class="btn btn-success btn-edit" data-bs-toggle="modal" data-bs-target="#inventoryModal" data-action="create-inventory">
-                        <i class="fas fa-plus me-2"></i>Neuer Gegenstand
-                    </button>
-                    <?php if ($auth->hasFullAccess()): ?>
-                        <a href="index.php?page=inventory_config" class="btn btn-outline-secondary btn-edit ms-2" title="Standorte und Kategorien verwalten">
-                            <i class="fas fa-cog"></i>
-                        </a>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
+            <small class="text-muted">Die Ergebnisse werden während der Eingabe automatisch aktualisiert</small>
         </div>
-
-        <!-- Mobile Filter Button (only visible on mobile) -->
-        <div class="row mb-3 d-md-none">
-            <div class="col-12">
-                <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas" aria-controls="filterOffcanvas">
-                    <i class="fas fa-filter me-2"></i>Filter anzeigen
+        <?php if ($canEdit): ?>
+            <div class="col-md-4 text-md-end">
+                <button type="button" class="btn btn-success btn-edit" data-bs-toggle="modal" data-bs-target="#inventoryModal" data-action="create-inventory">
+                    <i class="fas fa-plus me-2"></i>Neuer Gegenstand
                 </button>
+                <?php if ($auth->hasFullAccess()): ?>
+                    <a href="index.php?page=inventory_config" class="btn btn-outline-secondary btn-edit ms-2" title="Standorte und Kategorien verwalten">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                <?php endif; ?>
             </div>
-        </div>
-
-        <!-- Filter Pills for Categories, Locations, and Status (Desktop only) -->
-        <div class="row mb-4 d-none d-md-flex" id="desktopFilters">
-        <div class="col-12 mb-3">
-            <h6 class="text-muted mb-2">Kategorie filtern:</h6>
-            <div class="filter-pills" role="group" aria-label="Kategorie-Filter">
-                <span class="filter-pill active" data-filter-type="category" data-value="all" tabindex="0" role="button">
-                    <i class="fas fa-list me-1"></i> Alle
-                </span>
-                <span class="filter-pill" data-filter-type="category" data-value="technik" tabindex="0" role="button">
-                    <i class="fas fa-laptop me-1"></i> Technik
-                </span>
-                <span class="filter-pill" data-filter-type="category" data-value="marketing" tabindex="0" role="button">
-                    <i class="fas fa-bullhorn me-1"></i> Marketing
-                </span>
-                <span class="filter-pill" data-filter-type="category" data-value="buero" tabindex="0" role="button">
-                    <i class="fas fa-building me-1"></i> Büro
-                </span>
-                <span class="filter-pill" data-filter-type="category" data-value="veranstaltung" tabindex="0" role="button">
-                    <i class="fas fa-calendar-alt me-1"></i> Veranstaltung
-                </span>
-                <span class="filter-pill" data-filter-type="category" data-value="sonstiges" tabindex="0" role="button">
-                    <i class="fas fa-box me-1"></i> Sonstiges
-                </span>
-            </div>
-        </div>
-        
-        <div class="col-md-6 mb-3">
-            <h6 class="text-muted mb-2">Standort filtern:</h6>
-            <select class="form-select form-select-lg form-select-touch" id="locationFilter" aria-label="Standort filtern">
-                <option value="all" selected>Alle Standorte</option>
-                <option value="Keller vorne H-1.87">Keller vorne H-1.87</option>
-                <option value="Keller hinten H-1.88">Keller hinten H-1.88</option>
-                <?php foreach ($allLocations as $location): ?>
-                    <?php if ($location !== 'Keller vorne H-1.87' && $location !== 'Keller hinten H-1.88'): ?>
-                        <option value="<?php echo htmlspecialchars($location, ENT_QUOTES, 'UTF-8'); ?>">
-                            <?php echo htmlspecialchars($location, ENT_QUOTES, 'UTF-8'); ?>
-                        </option>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        
-        <div class="col-md-6 mb-3">
-            <h6 class="text-muted mb-2">Status filtern:</h6>
-            <div class="filter-pills" role="group" aria-label="Status-Filter">
-                <span class="filter-pill active" data-filter-type="status" data-value="all" tabindex="0" role="button">
-                    <i class="fas fa-circle me-1"></i> Alle Status
-                </span>
-                <span class="filter-pill" data-filter-type="status" data-value="active" tabindex="0" role="button">
-                    <i class="fas fa-check-circle text-success me-1"></i> Aktiv
-                </span>
-                <span class="filter-pill" data-filter-type="status" data-value="broken" tabindex="0" role="button">
-                    <i class="fas fa-times-circle text-danger me-1"></i> Defekt
-                </span>
-                <span class="filter-pill" data-filter-type="status" data-value="archived" tabindex="0" role="button">
-                    <i class="fas fa-archive text-secondary me-1"></i> Archiviert
-                </span>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
-    </div> <!-- End sticky-filter-bar -->
 
-    <!-- Statistics Cards -->
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-4 mb-4">
-        <div class="col">
-            <div class="card glass-card text-center p-4 h-100">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="fas fa-boxes text-primary"></i>
-                    </h5>
-                    <h3 class="mb-0"><?php echo $stats['total_items']; ?></h3>
-                    <p class="text-muted mb-0">Gesamt Artikel</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card glass-card text-center p-4 h-100">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="fas fa-layer-group text-success"></i>
-                    </h5>
-                    <h3 class="mb-0"><?php echo $stats['total_quantity']; ?></h3>
-                    <p class="text-muted mb-0">Gesamt Menge</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card glass-card text-center p-4 h-100">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="fas fa-tags text-info"></i>
-                    </h5>
-                    <h3 class="mb-0"><?php echo $stats['categories']; ?></h3>
-                    <p class="text-muted mb-0">Kategorien</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card glass-card text-center p-4 h-100">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="fas fa-exclamation-triangle text-warning"></i>
-                    </h5>
-                    <h3 class="mb-0"><?php echo $stats['zero_quantity']; ?></h3>
-                    <p class="text-muted mb-0">Nicht verfügbar</p>
-                </div>
-            </div>
+    <!-- Mobile Filter Button (only visible on mobile) -->
+    <div class="row mb-3 d-lg-none">
+        <div class="col-12">
+            <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas" aria-controls="filterOffcanvas">
+                <i class="fas fa-filter me-2"></i>Filter anzeigen
+            </button>
         </div>
     </div>
 
-    <!-- Inventory Card Grid (CSS Grid) -->
-    <div class="inventory-grid" id="inventoryContainer" role="region" aria-live="polite" aria-label="Inventar-Liste">
+    <!-- Two Column Layout: Sidebar Filters (LG+) + Main Content -->
+    <div class="row">
+        <!-- Filter Sidebar (Desktop LG+ only) -->
+        <div class="col-lg-3 d-none d-lg-block mb-4">
+            <div class="filter-sidebar sticky-lg-top">
+                <div class="card glass-card p-3">
+                    <h5 class="mb-3">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </h5>
+                    
+                    <!-- Category Filter -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2">Kategorie:</h6>
+                        <div class="d-flex flex-column gap-2" role="group" aria-label="Kategorie-Filter">
+                            <button class="btn btn-outline-primary filter-btn active text-start" data-filter-type="category" data-value="all">
+                                <i class="fas fa-list me-2"></i> Alle
+                            </button>
+                            <button class="btn btn-outline-primary filter-btn text-start" data-filter-type="category" data-value="technik">
+                                <i class="fas fa-laptop me-2"></i> Technik
+                            </button>
+                            <button class="btn btn-outline-primary filter-btn text-start" data-filter-type="category" data-value="marketing">
+                                <i class="fas fa-bullhorn me-2"></i> Marketing
+                            </button>
+                            <button class="btn btn-outline-primary filter-btn text-start" data-filter-type="category" data-value="buero">
+                                <i class="fas fa-building me-2"></i> Büro
+                            </button>
+                            <button class="btn btn-outline-primary filter-btn text-start" data-filter-type="category" data-value="veranstaltung">
+                                <i class="fas fa-calendar-alt me-2"></i> Veranstaltung
+                            </button>
+                            <button class="btn btn-outline-primary filter-btn text-start" data-filter-type="category" data-value="sonstiges">
+                                <i class="fas fa-box me-2"></i> Sonstiges
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Location Filter -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2">Standort:</h6>
+                        <select class="form-select" id="locationFilter" aria-label="Standort filtern">
+                            <option value="all" selected>Alle Standorte</option>
+                            <option value="Keller vorne H-1.87">Keller vorne H-1.87</option>
+                            <option value="Keller hinten H-1.88">Keller hinten H-1.88</option>
+                            <?php foreach ($allLocations as $location): ?>
+                                <?php if ($location !== 'Keller vorne H-1.87' && $location !== 'Keller hinten H-1.88'): ?>
+                                    <option value="<?php echo htmlspecialchars($location, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($location, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Status:</h6>
+                        <div class="d-flex flex-column gap-2" role="group" aria-label="Status-Filter">
+                            <button class="btn btn-outline-secondary filter-btn active text-start" data-filter-type="status" data-value="all">
+                                <i class="fas fa-circle me-2"></i> Alle Status
+                            </button>
+                            <button class="btn btn-outline-secondary filter-btn text-start" data-filter-type="status" data-value="active">
+                                <i class="fas fa-check-circle text-success me-2"></i> Aktiv
+                            </button>
+                            <button class="btn btn-outline-secondary filter-btn text-start" data-filter-type="status" data-value="broken">
+                                <i class="fas fa-times-circle text-danger me-2"></i> Defekt
+                            </button>
+                            <button class="btn btn-outline-secondary filter-btn text-start" data-filter-type="status" data-value="archived">
+                                <i class="fas fa-archive text-secondary me-2"></i> Archiviert
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Reset Button -->
+                    <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                        <i class="fas fa-undo me-2"></i>Zurücksetzen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-lg-9">
+
+            <!-- Statistics Cards -->
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+                <div class="col">
+                    <div class="card glass-card text-center p-3 h-100">
+                        <div class="card-body p-2">
+                            <h5 class="card-title mb-2">
+                                <i class="fas fa-boxes text-primary"></i>
+                            </h5>
+                            <h3 class="mb-0"><?php echo $stats['total_items']; ?></h3>
+                            <p class="text-muted mb-0 small">Gesamt Artikel</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card glass-card text-center p-3 h-100">
+                        <div class="card-body p-2">
+                            <h5 class="card-title mb-2">
+                                <i class="fas fa-layer-group text-success"></i>
+                            </h5>
+                            <h3 class="mb-0"><?php echo $stats['total_quantity']; ?></h3>
+                            <p class="text-muted mb-0 small">Gesamt Menge</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card glass-card text-center p-3 h-100">
+                        <div class="card-body p-2">
+                            <h5 class="card-title mb-2">
+                                <i class="fas fa-tags text-info"></i>
+                            </h5>
+                            <h3 class="mb-0"><?php echo $stats['categories']; ?></h3>
+                            <p class="text-muted mb-0 small">Kategorien</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card glass-card text-center p-3 h-100">
+                        <div class="card-body p-2">
+                            <h5 class="card-title mb-2">
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                            </h5>
+                            <h3 class="mb-0"><?php echo $stats['zero_quantity']; ?></h3>
+                            <p class="text-muted mb-0 small">Nicht verfügbar</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Card Grid (CSS Grid) -->
+            <div class="inventory-grid" id="inventoryContainer" role="region" aria-live="polite" aria-label="Inventar-Liste">
         <?php if (empty($items)): ?>
             <div class="empty-state">
                 <div class="card glass-card text-center py-5 px-4 h-100">
@@ -653,6 +672,16 @@ if (!is_array($allCategories)) {
                                 </p>
                             <?php endif; ?>
                             
+                            <!-- Current Stock - Prominently Displayed -->
+                            <div class="stock-display mb-3 p-2 bg-light rounded">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="text-muted small">Bestand:</span>
+                                    <span class="fs-5 fw-bold <?php echo $quantity == 0 ? 'text-danger' : ($quantity <= 5 ? 'text-warning' : 'text-success'); ?>">
+                                        <?php echo $item['quantity']; ?> Stück
+                                    </span>
+                                </div>
+                            </div>
+                            
                             <?php if (!empty($item['description'])): ?>
                                 <p class="card-text text-muted small"><?php echo htmlspecialchars($item['description'], ENT_QUOTES, 'UTF-8'); ?></p>
                             <?php endif; ?>
@@ -695,8 +724,10 @@ if (!is_array($allCategories)) {
                     </div>
             <?php endforeach; ?>
         <?php endif; ?>
-    </div>
-</div>
+            </div> <!-- End inventory-grid -->
+        </div> <!-- End col-lg-9 main content -->
+    </div> <!-- End row for two-column layout -->
+</div> <!-- End container -->
 
 <!-- Inventory Modal (Create/Edit) -->
 <?php if ($canEdit): ?>
@@ -947,19 +978,27 @@ if (!is_array($allCategories)) {
 <!-- JavaScript for Location Dropdown Filter -->
 <!-- Custom Styles for Inventory Cards -->
 <style>
-/* Sticky Filter Bar */
-.sticky-filter-bar {
+/* Filter Sidebar for Desktop (LG+) */
+.filter-sidebar {
+    top: 80px; /* Adjust based on navbar height */
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+}
+
+.filter-sidebar .card {
     position: sticky;
-    top: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    z-index: 100;
-    padding: 1rem 0;
-    margin-left: -1rem;
-    margin-right: -1rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    top: 80px;
+}
+
+.filter-btn {
+    text-align: left;
+    width: 100%;
+}
+
+.filter-btn.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
 }
 
 /* CSS Grid Layout for Inventory Cards */
@@ -1072,25 +1111,21 @@ if (!is_array($allCategories)) {
     margin: 0;
 }
 
+/* Stock Display - Prominent */
+.stock-display {
+    border-left: 3px solid #dee2e6;
+}
+
 /* Skeleton Loader Adjustments for Card Layout */
 .skeleton-loader-item .inventory-image-container {
     aspect-ratio: 4 / 3;
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 991px) {
     .inventory-grid {
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         gap: 1rem;
-    }
-    
-    .sticky-filter-bar {
-        /* Keep sticky on mobile for better UX */
-        padding: 0.75rem 0;
-        margin-left: -0.5rem;
-        margin-right: -0.5rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
     }
 }
 
@@ -1125,14 +1160,25 @@ if (!is_array($allCategories)) {
     border-color: rgba(108, 92, 231, 1);
 }
 
-/* Touch-friendly button sizes */
+/* Touch-friendly button sizes - Apple HIG standard 44px */
 .btn-touch {
     min-width: 44px;
     min-height: 44px;
+    padding: 0.5rem 1rem;
 }
 
 .form-select-touch {
     min-height: 44px;
+}
+
+/* Mobile quantity controls spacing */
+.mobile-quantity-controls .gap-3 {
+    gap: 1.5rem !important; /* Ensure adequate spacing between + and - buttons */
+}
+
+.quantity-btn {
+    border-width: 2px;
+    font-weight: 600;
 }
 </style>
 
@@ -1179,12 +1225,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Sync filter pills between desktop and mobile offcanvas
+    // Handle filter button clicks (sidebar desktop buttons)
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const filterType = this.getAttribute('data-filter-type');
+            const value = this.getAttribute('data-value');
+            
+            // Remove active from siblings with same filter type
+            document.querySelectorAll(`.filter-btn[data-filter-type="${filterType}"]`).forEach(b => {
+                b.classList.remove('active');
+            });
+            
+            // Add active to clicked button
+            this.classList.add('active');
+            
+            // Sync with mobile offcanvas pills
+            document.querySelectorAll(`#filterOffcanvas .filter-pill[data-filter-type="${filterType}"]`).forEach(pill => {
+                if (pill.getAttribute('data-value') === value) {
+                    pill.classList.add('active');
+                } else {
+                    pill.classList.remove('active');
+                }
+            });
+            
+            // Apply filter using existing function
+            if (typeof applyFilter === 'function') {
+                applyFilter(filterType, value, this);
+            }
+        });
+    });
+    
+    // Sync filter pills between desktop buttons and mobile offcanvas
     const syncFilterPills = function() {
-        const desktopPills = document.querySelectorAll('#desktopFilters .filter-pill');
         const mobilePills = document.querySelectorAll('#filterOffcanvas .filter-pill');
         
-        // When a filter pill is clicked, sync with corresponding pill
+        // When a mobile filter pill is clicked, sync with desktop buttons
         const handlePillClick = function(e) {
             const clickedPill = e.target.closest('.filter-pill');
             if (!clickedPill) return;
@@ -1192,12 +1267,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const filterType = clickedPill.getAttribute('data-filter-type');
             const value = clickedPill.getAttribute('data-value');
             
-            // Sync all pills with same filter type and value
+            // Sync mobile pills
             document.querySelectorAll(`.filter-pill[data-filter-type="${filterType}"]`).forEach(pill => {
                 if (pill.getAttribute('data-value') === value) {
                     pill.classList.add('active');
                 } else if (pill.getAttribute('data-filter-type') === filterType) {
                     pill.classList.remove('active');
+                }
+            });
+            
+            // Sync desktop filter buttons
+            document.querySelectorAll(`.filter-btn[data-filter-type="${filterType}"]`).forEach(btn => {
+                if (btn.getAttribute('data-value') === value) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
                 }
             });
         };
