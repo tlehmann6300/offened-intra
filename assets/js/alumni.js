@@ -170,11 +170,13 @@ function initAlumniDatabaseSearch() {
         if (profiles.length === 0) {
             gridContainer.innerHTML = `
                 <div class="col-12">
-                    <div class="card glass-card text-center py-5 px-4">
+                    <div class="card glass-card text-center py-5 px-4" style="max-width: 600px; margin: 0 auto;">
                         <div class="card-body">
-                            <i class="fas fa-user-friends fa-4x text-muted mb-3"></i>
-                            <h4>Keine Alumni-Profile gefunden</h4>
-                            <p class="text-muted">
+                            <div class="empty-state-icon mb-4">
+                                <i class="fas fa-user-friends fa-5x text-primary" style="opacity: 0.3;"></i>
+                            </div>
+                            <h3 class="mb-3">Keine Alumni-Profile gefunden</h3>
+                            <p class="text-muted mb-0">
                                 ${searchTerm ? 'Ihre Suche ergab keine Treffer. Versuchen Sie andere Suchbegriffe.' : 'Das Alumni-Netzwerk wird derzeit aufgebaut. Schauen Sie bald wieder vorbei!'}
                             </p>
                         </div>

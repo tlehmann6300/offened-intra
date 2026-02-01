@@ -1842,6 +1842,140 @@ function createAlumniSkeleton(count = 6) {
 }
 
 /**
+ * Universal Skeleton Loader Function
+ * Creates skeleton placeholders for different content types
+ * @param {string} type - Type of skeleton to create ('inventory', 'alumni', 'search', 'generic')
+ * @param {number} count - Number of skeleton items to show
+ * @returns {string} HTML string containing skeleton loaders
+ */
+function createUniversalSkeleton(type = 'generic', count = 6) {
+    switch(type) {
+        case 'inventory':
+            return createInventorySkeletonCards(count);
+        case 'alumni':
+            return createAlumniSkeleton(count);
+        case 'search':
+            return createGlobalSearchSkeleton();
+        case 'generic':
+        default:
+            return createGenericSkeletonCards(count);
+    }
+}
+
+/**
+ * Create generic skeleton cards for list items
+ * @param {number} count - Number of skeleton items to show
+ * @returns {string} HTML string containing skeleton cards
+ */
+function createGenericSkeletonCards(count = 6) {
+    const skeletonCards = [];
+    
+    for (let i = 0; i < count; i++) {
+        skeletonCards.push(`
+            <div class="col" aria-hidden="true">
+                <div class="card glass-card h-100">
+                    <div class="card-body">
+                        <div class="placeholder-glow mb-3">
+                            <span class="placeholder col-9 bg-secondary"></span>
+                        </div>
+                        <div class="placeholder-glow mb-2">
+                            <span class="placeholder col-12 bg-secondary"></span>
+                            <span class="placeholder col-11 bg-secondary"></span>
+                            <span class="placeholder col-10 bg-secondary"></span>
+                        </div>
+                        <div class="placeholder-glow">
+                            <span class="placeholder col-7 bg-secondary"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+    }
+    
+    return skeletonCards.join('');
+}
+
+/**
+ * Create inventory skeleton cards (wrapper for consistency)
+ * @param {number} count - Number of skeleton items to show
+ * @returns {string} HTML string containing skeleton cards
+ */
+function createInventorySkeletonCards(count = 8) {
+    const skeletonCards = [];
+    
+    for (let i = 0; i < count; i++) {
+        skeletonCards.push(`
+            <div class="col" aria-hidden="true">
+                <div class="card glass-card inventory-card h-100">
+                    <div class="placeholder-glow">
+                        <div class="inventory-image-container">
+                            <div class="placeholder col-12 bg-secondary" style="width: 100%; height: 100%;"></div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="placeholder-glow mb-2">
+                            <span class="placeholder col-8 bg-secondary"></span>
+                        </div>
+                        <div class="placeholder-glow mb-3">
+                            <span class="placeholder col-12 bg-secondary"></span>
+                            <span class="placeholder col-10 bg-secondary"></span>
+                        </div>
+                        <div class="placeholder-glow">
+                            <span class="placeholder col-6 bg-secondary"></span>
+                            <span class="placeholder col-5 bg-secondary"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+    }
+    
+    return skeletonCards.join('');
+}
+
+/**
+ * Create skeleton placeholders for global search results
+ * Shows structured placeholders for the 5 main result categories
+ * @returns {string} HTML string containing skeleton loaders
+ */
+function createGlobalSearchSkeleton() {
+    const categories = [
+        { icon: 'fa-boxes', name: 'Gegenstände', count: 2 },
+        { icon: 'fa-user-graduate', name: 'Personen', count: 2 },
+        { icon: 'fa-newspaper', name: 'News', count: 1 },
+        { icon: 'fa-calendar-alt', name: 'Events', count: 1 },
+        { icon: 'fa-briefcase', name: 'Projekte', count: 1 }
+    ];
+    
+    let html = '<div class="dropdown-header bg-light border-bottom placeholder-glow">';
+    html += '<span class="placeholder col-6 bg-secondary"></span>';
+    html += '</div>';
+    
+    categories.forEach(category => {
+        html += `<h6 class="dropdown-header placeholder-glow">
+            <i class="fas ${category.icon} me-2"></i>
+            <span class="placeholder col-4 bg-secondary"></span>
+        </h6>`;
+        
+        for (let i = 0; i < category.count; i++) {
+            html += `<div class="dropdown-item" aria-hidden="true">
+                <div class="placeholder-glow">
+                    <div class="fw-bold mb-1">
+                        <span class="placeholder col-8 bg-secondary"></span>
+                    </div>
+                    <small class="text-muted d-block">
+                        <span class="placeholder col-10 bg-secondary"></span>
+                    </small>
+                </div>
+            </div>`;
+        }
+        html += '<div class="dropdown-divider"></div>';
+    });
+    
+    return html;
+}
+
+/**
  * Render inventory items in the grid using DocumentFragment to minimize reflows
  * DocumentFragment reduces DOM manipulation overhead by batching all DOM insertions
  * into a single operation, preventing multiple layout recalculations
