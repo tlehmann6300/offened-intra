@@ -265,6 +265,13 @@ $firstname = $auth->getFirstname() ?? 'Benutzer';
                     <div class="text-center mt-3">
                         <small class="text-muted">Verwalten Sie Ihr Inventar und behalten Sie den Überblick</small>
                     </div>
+                    <?php if ($auth->hasFullAccess()): ?>
+                        <div class="text-center mt-3 pt-3 border-top">
+                            <a href="index.php?page=inventory_audit" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="fas fa-history me-2"></i>Inventar-Audit
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -297,6 +304,13 @@ $firstname = $auth->getFirstname() ?? 'Benutzer';
                     <div class="text-center mt-3">
                         <small class="text-muted">Vernetzen Sie sich mit ehemaligen Mitgliedern</small>
                     </div>
+                    <?php if ($auth->hasFullAccess()): ?>
+                        <div class="text-center mt-3 pt-3 border-top">
+                            <a href="index.php?page=alumni_validation" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="fas fa-user-check me-2"></i>Alumni-Validierung
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
