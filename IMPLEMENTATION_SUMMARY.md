@@ -6,16 +6,16 @@ Successfully created two separate, professional SQL files for the IBC-Intranet m
 
 ### Files Created
 
-1. **user_db_setup.sql** (11 KB, 222 lines)
-   - Database: dbs15253086
-   - 5 tables: users, alumni_profiles, login_attempts, invitations, system_logs
+1. **dbs15253086.sql** (9 KB)
+   - Database: dbs15253086 (User Database)
+   - 4 tables: users, alumni_profiles, login_attempts, invitations
    - Complete TOTP login system
    - Alumni validation workflow
    - Test user: tom.lehmann@business-consulting.de (admin role)
 
-2. **content_db_setup.sql** (20 KB, 452 lines)
-   - Database: dbs15161271
-   - 8 tables: inventory, inventory_categories, inventory_locations, events, event_helper_slots, event_helper_registrations, projects, news
+2. **dbs15161271.sql** (19 KB)
+   - Database: dbs15161271 (Content Database)
+   - 9 tables: inventory, inventory_categories, inventory_locations, events, event_helper_slots, event_helper_registrations, projects, news, system_logs
    - Complete test data including Sommerfest event with 3 helper slots
    - Categories: Getränke, Becher, Kostüme, Tische (as required)
 
@@ -69,10 +69,10 @@ Successfully created two separate, professional SQL files for the IBC-Intranet m
 
 ```bash
 # Setup User Database
-mysql -h db5019508945.hosting-data.io -u dbu4494103 -p dbs15253086 < user_db_setup.sql
+mysql -h db5019508945.hosting-data.io -u dbu4494103 -p dbs15253086 < dbs15253086.sql
 
 # Setup Content Database
-mysql -h db5019375140.hosting-data.io -u dbu2067984 -p dbs15161271 < content_db_setup.sql
+mysql -h db5019375140.hosting-data.io -u dbu2067984 -p dbs15161271 < dbs15161271.sql
 ```
 
 ### Test Login

@@ -29,18 +29,22 @@ Dieses IBC-Intranet-System verwendet eine **Multi-Datenbank-Architektur** mit zw
 
 ## Dateien
 
-### 01_schema.sql
-**Vollständige Datenbank-Struktur**
+### dbs15253086.sql
+**User-Datenbank Setup mit Schema und Test-Daten**
 
-Diese Datei enthält die komplette Schema-Definition für beide Datenbanken:
+Diese Datei enthält die komplette Schema-Definition und Test-Daten für die User-Datenbank (dbs15253086):
 
-#### User-Datenbank (dbs15253086):
 - **users**: Benutzerverwaltung mit Authentication, 2FA und Rollenkonzept
 - **alumni_profiles**: Erweiterte Profile für Alumni mit Karriereinformationen
 - **login_attempts**: Rate-Limiting und Login-Tracking
 - **invitations**: Token-basiertes Einladungssystem
+- **Admin-User**: tom.lehmann@business-consulting.de (Passwort: AdminPass2024!)
 
-#### Content-Datenbank (dbs15161271):
+### dbs15161271.sql
+**Content-Datenbank Setup mit Schema und Test-Daten**
+
+Diese Datei enthält die komplette Schema-Definition und Test-Daten für die Content-Datenbank (dbs15161271):
+
 - **projects**: Projektverwaltung mit Status und Team-Information
 - **inventory**: Inventarverwaltung mit Mengen und Preisen
 - **inventory_categories**: Kategorien für Inventar-Artikel
@@ -50,12 +54,6 @@ Diese Datei enthält die komplette Schema-Definition für beide Datenbanken:
 - **event_helper_registrations**: Helfer-Anmeldungen
 - **news**: News und Ankündigungen
 - **system_logs**: Audit-Logs für administrative Aktionen
-
-### 02_data_dump.sql
-**Test-Daten für Entwicklung und Testing**
-
-Diese Datei enthält Beispieldaten für beide Datenbanken:
-- **Admin-User**: tom.lehmann@business-consulting.de
 - **Inventar-Kategorien**: 8 Kategorien (Getränke, Becher, Kostüme, Tische, etc.)
 - **Inventar-Standorte**: 4 Standorte (Hauptlager, Büro, Eventlager, etc.)
 - **Test-Event**: "Sommerfest 2026" mit 3 Helfer-Slots
@@ -79,37 +77,27 @@ Diese Datei enthält Beispieldaten für beide Datenbanken:
 1. Melden Sie sich bei phpMyAdmin an
 2. Wählen Sie die Datenbank `dbs15253086` aus
 3. Klicken Sie auf den Tab "SQL"
-4. Öffnen Sie die Datei `01_schema.sql` und kopieren Sie **nur** den Teil für die User-Datenbank (bis zur Trennlinie "CONTENT-DATENBANK")
-5. Fügen Sie den Code ein und klicken Sie auf "Go"
-6. Öffnen Sie die Datei `02_data_dump.sql` und kopieren Sie **nur** den Teil für die User-Datenbank
-7. Fügen Sie den Code ein und klicken Sie auf "Go"
+4. Öffnen Sie die Datei `dbs15253086.sql`
+5. Kopieren Sie den kompletten Inhalt und fügen Sie ihn ein
+6. Klicken Sie auf "Go"
 
 #### Schritt 2: Content-Datenbank einrichten
 
 1. Wählen Sie die Datenbank `dbs15161271` aus
 2. Klicken Sie auf den Tab "SQL"
-3. Öffnen Sie die Datei `01_schema.sql` und kopieren Sie **nur** den Teil für die Content-Datenbank (ab der Trennlinie "CONTENT-DATENBANK")
-4. Fügen Sie den Code ein und klicken Sie auf "Go"
-5. Öffnen Sie die Datei `02_data_dump.sql` und kopieren Sie **nur** den Teil für die Content-Datenbank
-6. Fügen Sie den Code ein und klicken Sie auf "Go"
+3. Öffnen Sie die Datei `dbs15161271.sql`
+4. Kopieren Sie den kompletten Inhalt und fügen Sie ihn ein
+5. Klicken Sie auf "Go"
 
 ### Option 2: Über MySQL Command Line
 
 ```bash
-# User-Datenbank: Schema erstellen
-mysql -h db5019508945.hosting-data.io -u dbu4494103 -p dbs15253086 < 01_schema_user.sql
+# User-Datenbank: Schema und Test-Daten importieren
+mysql -h db5019508945.hosting-data.io -u dbu4494103 -p dbs15253086 < dbs15253086.sql
 
-# User-Datenbank: Test-Daten einfügen
-mysql -h db5019508945.hosting-data.io -u dbu4494103 -p dbs15253086 < 02_data_dump_user.sql
-
-# Content-Datenbank: Schema erstellen
-mysql -h db5019375140.hosting-data.io -u dbu2067984 -p dbs15161271 < 01_schema_content.sql
-
-# Content-Datenbank: Test-Daten einfügen
-mysql -h db5019375140.hosting-data.io -u dbu2067984 -p dbs15161271 < 02_data_dump_content.sql
+# Content-Datenbank: Schema und Test-Daten importieren
+mysql -h db5019375140.hosting-data.io -u dbu2067984 -p dbs15161271 < dbs15161271.sql
 ```
-
-**Hinweis**: Sie müssen die SQL-Dateien ggf. in separate Dateien aufteilen für User-DB und Content-DB.
 
 ### Option 3: Über Import-Script
 
@@ -212,10 +200,14 @@ Das System implementiert einen mehrstufigen Alumni-Validierungs-Prozess:
 
 ### Schema-Updates
 
-Für Schema-Änderungen verwenden Sie die Migration-Files im `/migrations` Verzeichnis:
+Für Schema-Änderungen können Sie SQL-Migrations-Skripte direkt auf den Datenbanken ausführen:
 
 ```bash
-mysql -h [...] -u [...] -p [...] < migrations/XXX_description.sql
+# User-Datenbank
+mysql -h db5019508945.hosting-data.io -u dbu4494103 -p dbs15253086 < migration.sql
+
+# Content-Datenbank
+mysql -h db5019375140.hosting-data.io -u dbu2067984 -p dbs15161271 < migration.sql
 ```
 
 ### Backup erstellen
