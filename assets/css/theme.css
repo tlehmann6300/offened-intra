@@ -2673,8 +2673,15 @@ body.edit-mode-active .navbar.sticky-top {
 }
 
 @keyframes heroFloat {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-5px) scale(1.005); }
+    0% { 
+        transform: translateY(0) scale(1); 
+    }
+    50% { 
+        transform: translateY(-5px) scale(1.005); 
+    }
+    100% { 
+        transform: translateY(0) scale(1); 
+    }
 }
 
 .hero-section-dashboard::before {
@@ -3107,11 +3114,14 @@ html {
 
 /* Pulse animation */
 @keyframes pulse {
-    0%, 100% {
+    0% {
         transform: scale(1);
     }
     50% {
         transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
     }
 }
 
@@ -3147,13 +3157,17 @@ html {
 }
 
 @keyframes glowPulse {
-    0%, 100% {
+    0% {
         box-shadow: 0 0 20px rgba(37, 99, 235, 0.4),
                     0 0 40px rgba(37, 99, 235, 0.2);
     }
     50% {
         box-shadow: 0 0 30px rgba(37, 99, 235, 0.6),
                     0 0 60px rgba(37, 99, 235, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(37, 99, 235, 0.4),
+                    0 0 40px rgba(37, 99, 235, 0.2);
     }
 }
 
