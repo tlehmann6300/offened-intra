@@ -1,101 +1,25 @@
     </main>
     
-    <!-- Modern Footer - Clean & Minimal -->
-    <footer class="modern-footer">
-        <div class="container">
-            <!-- Main Footer Content - Three Column Layout -->
-            <div class="row footer-main-content">
-                <!-- Left Column: Über uns (About Us) -->
-                <div class="col-lg-4 col-md-12 mb-4 mb-lg-0">
-                    <div class="footer-brand">
-                        <h6 class="footer-heading">Über uns</h6>
-                        <img src="<?= SITE_URL ?>/assets/img/ibc_logo_original.webp" 
-                             alt="<?php echo htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8'); ?> Logo" 
-                             class="footer-logo mb-3">
-                        <p class="footer-description">
-                            Institut für Business Consulting e.V.<br>
-                            <span class="footer-tagline">Ihre Plattform für professionelle Zusammenarbeit</span>
-                        </p>
-                        <!-- Social Media Icons -->
-                        <div class="footer-social-icons mt-3">
-                            <a href="#" class="social-icon-link" aria-label="LinkedIn" title="LinkedIn">
-                                <i class="fab fa-linkedin"></i>
-                            </a>
-                            <a href="#" class="social-icon-link" aria-label="Instagram" title="Instagram">
-                                <i class="fab fa-instagram"></i>
-                            </a>
-                        </div>
-                    </div>
+    <!-- Minimal Footer - Single Line -->
+    <footer class="minimal-footer bg-light border-top py-3 mt-auto">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start mb-2 mb-md-0">
+                    <small class="text-muted">
+                        &copy; <?php echo date('Y'); ?> Institut für Business Consulting e.V. Alle Rechte vorbehalten.
+                    </small>
                 </div>
-                
-                <!-- Center Column: Quick Links -->
-                <div class="col-lg-4 col-md-6 mb-4 mb-lg-0">
-                    <h6 class="footer-heading">Quick-Links</h6>
-                    <ul class="footer-nav-links">
+                <div class="col-md-6 text-center text-md-end">
+                    <small>
+                        <a href="index.php?page=impressum" class="text-muted text-decoration-none me-3">Impressum</a>
+                        <a href="index.php?page=datenschutz" class="text-muted text-decoration-none">Datenschutz</a>
                         <?php if (isset($auth) && $auth->isLoggedIn()): ?>
-                            <li><a href="index.php?page=home" class="footer-nav-link"><i class="fas fa-home me-2"></i>Dashboard</a></li>
-                            <li><a href="index.php?page=events" class="footer-nav-link"><i class="fas fa-calendar-alt me-2"></i>Events</a></li>
-                            <li><a href="index.php?page=projects" class="footer-nav-link"><i class="fas fa-briefcase me-2"></i>Projekte</a></li>
-                            <li><a href="index.php?page=inventory" class="footer-nav-link"><i class="fas fa-boxes me-2"></i>Inventar</a></li>
-                        <?php else: ?>
-                            <li><a href="index.php?page=home" class="footer-nav-link"><i class="fas fa-home me-2"></i>Startseite</a></li>
+                            <span class="text-muted mx-2">•</span>
+                            <button type="button" class="btn btn-link btn-sm text-muted text-decoration-none p-0" style="vertical-align: baseline;" aria-label="Cookie-Einstellungen öffnen">
+                                Cookie-Einstellungen
+                            </button>
                         <?php endif; ?>
-                    </ul>
-                </div>
-                
-                <!-- Right Column: Status & Login Info -->
-                <div class="col-lg-4 col-md-6 mb-4 mb-lg-0">
-                    <h6 class="footer-heading">Status / Login</h6>
-                    <div class="footer-status-info">
-                        <?php if (isset($auth) && $auth->isLoggedIn()): ?>
-                            <div class="status-item">
-                                <i class="fas fa-circle-check status-icon"></i>
-                                <span class="status-label">Angemeldet als</span>
-                            </div>
-                            <div class="status-user">
-                                <i class="fas fa-user me-2"></i>
-                                <strong><?php echo htmlspecialchars($auth->getUser()['username'] ?? 'Nutzer', ENT_QUOTES, 'UTF-8'); ?></strong>
-                            </div>
-                            <div class="status-role">
-                                <i class="fas fa-shield-alt me-2"></i>
-                                <?php 
-                                    $role = $auth->getUser()['role'] ?? 'user';
-                                    $roleLabels = [
-                                        'admin' => 'Administrator',
-                                        'editor' => 'Redakteur',
-                                        'user' => 'Nutzer'
-                                    ];
-                                    echo htmlspecialchars($roleLabels[$role] ?? ucfirst($role), ENT_QUOTES, 'UTF-8'); 
-                                ?>
-                            </div>
-                        <?php else: ?>
-                            <div class="status-item">
-                                <i class="fas fa-circle-info status-icon"></i>
-                                <span class="status-label">Nicht angemeldet</span>
-                            </div>
-                            <div class="footer-copyright-alt">
-                                &copy; <?php echo date('Y'); ?> IBC e.V.
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Legal Bar - Separate Lower Section -->
-            <div class="footer-legal-bar">
-                <div class="legal-links">
-                    <a href="index.php?page=impressum" class="legal-link">Impressum</a>
-                    <span class="legal-separator">•</span>
-                    <a href="index.php?page=datenschutz" class="legal-link">Datenschutz</a>
-                    <?php if (isset($auth) && $auth->isLoggedIn()): ?>
-                        <span class="legal-separator">•</span>
-                        <button type="button" class="btn btn-link legal-link cookie-settings-link p-0" aria-label="Cookie-Einstellungen öffnen">
-                            Cookie-Einstellungen
-                        </button>
-                    <?php endif; ?>
-                </div>
-                <div class="footer-copyright">
-                    &copy; <?php echo date('Y'); ?> Institut für Business Consulting e.V. Alle Rechte vorbehalten.
+                    </small>
                 </div>
             </div>
         </div>

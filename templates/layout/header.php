@@ -103,15 +103,19 @@ $displayName = getUserDisplayName();
             <!-- Navbar Content -->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <?php if ($auth->isLoggedIn()): ?>
+                    <?php 
+                    // Get current page for active link highlighting
+                    $currentPage = $_GET['page'] ?? 'home';
+                    ?>
                     <!-- Left Navigation (Logged In Users) -->
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link" href="index.php?page=home">
+                            <a class="nav-link<?php echo ($currentPage === 'home') ? ' active' : ''; ?>" href="index.php?page=home">
                                 <i class="fas fa-home me-1"></i>Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link position-relative" href="index.php?page=events">
+                            <a class="nav-link<?php echo (in_array($currentPage, ['events', 'events_modern'], true)) ? ' active' : ''; ?> position-relative" href="index.php?page=events">
                                 <i class="fas fa-calendar-alt me-1"></i>Events
                                 <?php if ($hasHelperUpdate): ?>
                                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -122,17 +126,17 @@ $displayName = getUserDisplayName();
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="index.php?page=projects">
+                            <a class="nav-link<?php echo ($currentPage === 'projects') ? ' active' : ''; ?>" href="index.php?page=projects">
                                 <i class="fas fa-briefcase me-1"></i>Projekte
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="index.php?page=inventory">
+                            <a class="nav-link<?php echo ($currentPage === 'inventory') ? ' active' : ''; ?>" href="index.php?page=inventory">
                                 <i class="fas fa-boxes me-1"></i>Inventar
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="index.php?page=alumni_database">
+                            <a class="nav-link<?php echo (in_array($currentPage, ['alumni_database', 'alumni', 'alumni_modern'], true)) ? ' active' : ''; ?>" href="index.php?page=alumni_database">
                                 <i class="fas fa-user-graduate me-1"></i>Alumni
                             </a>
                         </li>
@@ -140,20 +144,20 @@ $displayName = getUserDisplayName();
                         <!-- Admin/Vorstand Links -->
                         <?php if ($auth->can('edit_news') || $auth->can('edit_projects') || $auth->can('edit_events')): ?>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle<?php echo (in_array($currentPage, ['admin_dashboard', 'news_editor', 'project_management', 'event_management'], true)) ? ' active' : ''; ?>" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-cog me-1"></i>Verwaltung
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="adminDropdown">
-                                <li><a class="dropdown-item" href="index.php?page=admin_dashboard"><i class="fas fa-chart-line me-2"></i>Admin Dashboard</a></li>
+                                <li><a class="dropdown-item<?php echo ($currentPage === 'admin_dashboard') ? ' active' : ''; ?>" href="index.php?page=admin_dashboard"><i class="fas fa-chart-line me-2"></i>Admin Dashboard</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <?php if ($auth->can('edit_news')): ?>
-                                    <li><a class="dropdown-item" href="index.php?page=news_editor"><i class="fas fa-newspaper me-2"></i>News Editor</a></li>
+                                    <li><a class="dropdown-item<?php echo ($currentPage === 'news_editor') ? ' active' : ''; ?>" href="index.php?page=news_editor"><i class="fas fa-newspaper me-2"></i>News Editor</a></li>
                                 <?php endif; ?>
                                 <?php if ($auth->can('edit_projects')): ?>
-                                    <li><a class="dropdown-item" href="index.php?page=project_management"><i class="fas fa-project-diagram me-2"></i>Projekt-Verwaltung</a></li>
+                                    <li><a class="dropdown-item<?php echo ($currentPage === 'project_management') ? ' active' : ''; ?>" href="index.php?page=project_management"><i class="fas fa-project-diagram me-2"></i>Projekt-Verwaltung</a></li>
                                 <?php endif; ?>
                                 <?php if ($auth->can('edit_events')): ?>
-                                    <li><a class="dropdown-item" href="index.php?page=event_management"><i class="fas fa-calendar-alt me-2"></i>Event-Verwaltung</a></li>
+                                    <li><a class="dropdown-item<?php echo ($currentPage === 'event_management') ? ' active' : ''; ?>" href="index.php?page=event_management"><i class="fas fa-calendar-alt me-2"></i>Event-Verwaltung</a></li>
                                 <?php endif; ?>
                             </ul>
                         </li>
@@ -302,6 +306,57 @@ $displayName = getUserDisplayName();
         </div>
     </nav>
     
+    <!-- Breadcrumb Navigation -->
+    <?php if ($auth->isLoggedIn()): ?>
+    <nav aria-label="breadcrumb" class="bg-light border-bottom">
+        <div class="container-fluid">
+            <ol class="breadcrumb py-2 mb-0">
+                <li class="breadcrumb-item"><a href="index.php?page=home"><i class="fas fa-home"></i></a></li>
+                <?php
+                // Define breadcrumb mappings
+                $breadcrumbMap = [
+                    'home' => ['Dashboard', 'fas fa-home'],
+                    'events' => ['Events', 'fas fa-calendar-alt'],
+                    'events_modern' => ['Events', 'fas fa-calendar-alt'],
+                    'event_management' => ['Events', 'fas fa-calendar-alt', 'Verwaltung'],
+                    'projects' => ['Projekte', 'fas fa-briefcase'],
+                    'project_management' => ['Projekte', 'fas fa-briefcase', 'Verwaltung'],
+                    'inventory' => ['Inventar', 'fas fa-boxes'],
+                    'inventory_config' => ['Inventar', 'fas fa-boxes', 'Konfiguration'],
+                    'alumni_database' => ['Alumni', 'fas fa-user-graduate'],
+                    'alumni' => ['Alumni', 'fas fa-user-graduate'],
+                    'alumni_modern' => ['Alumni', 'fas fa-user-graduate'],
+                    'settings' => ['Einstellungen', 'fas fa-cog'],
+                    'admin_dashboard' => ['Verwaltung', 'fas fa-cog', 'Dashboard'],
+                    'news_editor' => ['Verwaltung', 'fas fa-cog', 'News Editor'],
+                    'newsroom' => ['News', 'fas fa-newspaper'],
+                ];
+                
+                // Get current page
+                $currentPage = $_GET['page'] ?? 'home';
+                
+                if (isset($breadcrumbMap[$currentPage])) {
+                    $breadcrumb = $breadcrumbMap[$currentPage];
+                    $mainTitle = $breadcrumb[0];
+                    $icon = $breadcrumb[1];
+                    
+                    // If there's a sub-page (3rd element)
+                    if (isset($breadcrumb[2])) {
+                        echo '<li class="breadcrumb-item"><i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . ' me-1"></i>' . htmlspecialchars($mainTitle, ENT_QUOTES, 'UTF-8') . '</li>';
+                        echo '<li class="breadcrumb-item active" aria-current="page">' . htmlspecialchars($breadcrumb[2], ENT_QUOTES, 'UTF-8') . '</li>';
+                    } else {
+                        echo '<li class="breadcrumb-item active" aria-current="page"><i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . ' me-1"></i>' . htmlspecialchars($mainTitle, ENT_QUOTES, 'UTF-8') . '</li>';
+                    }
+                } else {
+                    // Default breadcrumb for unknown pages
+                    echo '<li class="breadcrumb-item active" aria-current="page">' . htmlspecialchars(ucfirst($currentPage), ENT_QUOTES, 'UTF-8') . '</li>';
+                }
+                ?>
+            </ol>
+        </div>
+    </nav>
+    <?php endif; ?>
+    
     <!-- Mobile Search Overlay (for logged in users) -->
     <?php if ($auth->isLoggedIn()): ?>
     <div class="mobile-search-overlay d-lg-none" id="mobileSearchOverlay" style="display: none;">
@@ -323,7 +378,7 @@ $displayName = getUserDisplayName();
         <div class="container-fluid">
             <div class="row text-center g-0">
                 <div class="col">
-                    <a href="index.php?page=home" class="text-white text-decoration-none d-flex flex-column align-items-center">
+                    <a href="index.php?page=home" class="text-white text-decoration-none d-flex flex-column align-items-center<?php echo ($currentPage === 'home') ? ' active' : ''; ?>">
                         <i class="fas fa-home fs-5"></i>
                         <small>Home</small>
                     </a>
@@ -335,13 +390,13 @@ $displayName = getUserDisplayName();
                     </button>
                 </div>
                 <div class="col">
-                    <a href="index.php?page=inventory" class="text-white text-decoration-none d-flex flex-column align-items-center">
+                    <a href="index.php?page=inventory" class="text-white text-decoration-none d-flex flex-column align-items-center<?php echo ($currentPage === 'inventory') ? ' active' : ''; ?>">
                         <i class="fas fa-boxes fs-5"></i>
                         <small>Inventar</small>
                     </a>
                 </div>
                 <div class="col">
-                    <a href="index.php?page=settings" class="text-white text-decoration-none d-flex flex-column align-items-center">
+                    <a href="index.php?page=settings" class="text-white text-decoration-none d-flex flex-column align-items-center<?php echo ($currentPage === 'settings') ? ' active' : ''; ?>">
                         <i class="fas fa-user fs-5"></i>
                         <small>Profil</small>
                     </a>
