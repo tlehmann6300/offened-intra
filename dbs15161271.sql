@@ -28,7 +28,7 @@ USE `dbs15161271`;
 -- Beschreibung: Kategorien für Inventar-Artikel
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `inventory_categories` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `key_name` VARCHAR(100) NOT NULL COMMENT 'Technischer Schlüssel (z.B. drinks, cups)',
   `display_name` VARCHAR(255) NOT NULL COMMENT 'Anzeigename (z.B. Getränke, Becher)',
   `is_active` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'Kategorie aktiv',
@@ -44,7 +44,7 @@ COMMENT='Inventar-Kategorien';
 -- Beschreibung: Lagerorte für Inventar-Artikel
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `inventory_locations` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL COMMENT 'Standortname',
   `is_active` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'Standort aktiv',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Erstellungszeitpunkt',
@@ -59,17 +59,17 @@ COMMENT='Inventar-Standorte';
 -- Beschreibung: Inventarverwaltung mit Preisen und Mengen
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `inventory` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) NOT NULL COMMENT 'Artikelname',
-  `category_id` INT(11) NULL COMMENT 'Verknüpfung zu inventory_categories.id',
-  `location_id` INT(11) NULL COMMENT 'Verknüpfung zu inventory_locations.id',
-  `quantity` INT(11) NOT NULL DEFAULT 0 COMMENT 'Verfügbare Menge',
+  `category_id` INT NULL COMMENT 'Verknüpfung zu inventory_categories.id',
+  `location_id` INT NULL COMMENT 'Verknüpfung zu inventory_locations.id',
+  `quantity` INT NOT NULL DEFAULT 0 COMMENT 'Verfügbare Menge',
   `purchase_price` DECIMAL(10,2) NULL COMMENT 'Einkaufspreis pro Einheit in Euro',
-  `responsible_user_id` INT(11) NULL COMMENT 'Verantwortlicher Benutzer (ID-Referenz zur User-DB users.id)',
+  `responsible_user_id` INT NULL COMMENT 'Verantwortlicher Benutzer (ID-Referenz zur User-DB users.id)',
   `status` ENUM('active', 'archived', 'broken') NOT NULL DEFAULT 'active' COMMENT 'Artikel-Status',
   `description` TEXT NULL COMMENT 'Artikelbeschreibung',
   `image_path` VARCHAR(500) NULL COMMENT 'Pfad zum Artikelbild',
-  `created_by` INT(11) NOT NULL COMMENT 'Ersteller (ID-Referenz zur User-DB users.id)',
+  `created_by` INT NOT NULL COMMENT 'Ersteller (ID-Referenz zur User-DB users.id)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Erstellungszeitpunkt',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Letzter Update-Zeitpunkt',
   PRIMARY KEY (`id`),
@@ -89,14 +89,14 @@ COMMENT='Inventarverwaltung mit Preisen und Mengen';
 -- Beschreibung: Event-Verwaltung
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `events` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(255) NOT NULL COMMENT 'Event-Titel',
   `description` TEXT NULL COMMENT 'Event-Beschreibung (HTML)',
   `date` DATETIME NOT NULL COMMENT 'Event-Datum und Uhrzeit',
   `location` VARCHAR(255) NULL COMMENT 'Event-Ort/Veranstaltungsort',
-  `max_participants` INT(11) NULL COMMENT 'Maximale Teilnehmerzahl',
+  `max_participants` INT NULL COMMENT 'Maximale Teilnehmerzahl',
   `image_path` VARCHAR(500) NULL COMMENT 'Pfad zum Event-Bild',
-  `created_by` INT(11) NOT NULL COMMENT 'Ersteller (ID-Referenz zur User-DB users.id)',
+  `created_by` INT NOT NULL COMMENT 'Ersteller (ID-Referenz zur User-DB users.id)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Erstellungszeitpunkt',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Letzter Update-Zeitpunkt',
   PRIMARY KEY (`id`),
@@ -110,10 +110,10 @@ COMMENT='Event-Verwaltung';
 -- Beschreibung: Helfer-Slots für Events mit Aufgabenbeschreibungen
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `event_helper_slots` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `event_id` INT(11) NOT NULL COMMENT 'Verknüpfung zu events.id',
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `event_id` INT NOT NULL COMMENT 'Verknüpfung zu events.id',
   `task_name` VARCHAR(255) NOT NULL COMMENT 'Aufgabenbezeichnung (z.B. Catering, Aufbau, Abbau)',
-  `required_helpers` INT(11) NOT NULL DEFAULT 1 COMMENT 'Benötigte Anzahl Helfer',
+  `required_helpers` INT NOT NULL DEFAULT 1 COMMENT 'Benötigte Anzahl Helfer',
   `description` TEXT NULL COMMENT 'Detaillierte Aufgabenbeschreibung',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Erstellungszeitpunkt',
   PRIMARY KEY (`id`),
@@ -127,9 +127,9 @@ COMMENT='Helfer-Slots für Events';
 -- Beschreibung: Helfer-Anmeldungen für Event-Slots
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `event_helper_registrations` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `slot_id` INT(11) NOT NULL COMMENT 'Verknüpfung zu event_helper_slots.id',
-  `user_id` INT(11) NOT NULL COMMENT 'Angemeldeter Benutzer (ID-Referenz zur User-DB users.id)',
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `slot_id` INT NOT NULL COMMENT 'Verknüpfung zu event_helper_slots.id',
+  `user_id` INT NOT NULL COMMENT 'Angemeldeter Benutzer (ID-Referenz zur User-DB users.id)',
   `registered_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Anmeldezeitpunkt',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_slot_user` (`slot_id`, `user_id`),
@@ -144,7 +144,7 @@ COMMENT='Helfer-Anmeldungen für Event-Slots';
 -- Beschreibung: Projektverwaltung
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `projects` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(255) NOT NULL COMMENT 'Projekttitel',
   `description` TEXT NULL COMMENT 'Projektbeschreibung (HTML)',
   `status` ENUM('planning', 'active', 'on_hold', 'completed', 'cancelled') NOT NULL DEFAULT 'planning' COMMENT 'Projektstatus',
@@ -153,10 +153,10 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `start_date` DATE NULL COMMENT 'Startdatum',
   `end_date` DATE NULL COMMENT 'Enddatum',
   `budget` DECIMAL(10,2) NULL COMMENT 'Projektbudget in Euro',
-  `team_size` INT(11) NULL COMMENT 'Teamgröße',
-  `project_lead_id` INT(11) NULL COMMENT 'Projektleiter (ID-Referenz zur User-DB users.id)',
+  `team_size` INT NULL COMMENT 'Teamgröße',
+  `project_lead_id` INT NULL COMMENT 'Projektleiter (ID-Referenz zur User-DB users.id)',
   `image_path` VARCHAR(500) NULL COMMENT 'Pfad zum Projektbild',
-  `created_by` INT(11) NOT NULL COMMENT 'Ersteller (ID-Referenz zur User-DB users.id)',
+  `created_by` INT NOT NULL COMMENT 'Ersteller (ID-Referenz zur User-DB users.id)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Erstellungszeitpunkt',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Letzter Update-Zeitpunkt',
   PRIMARY KEY (`id`),
@@ -172,10 +172,10 @@ COMMENT='Projektverwaltung';
 -- Beschreibung: News und Ankündigungen
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `news` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(255) NOT NULL COMMENT 'News-Titel',
   `content` TEXT NOT NULL COMMENT 'News-Inhalt (HTML/Quill-Format)',
-  `author_id` INT(11) NOT NULL COMMENT 'Autor (ID-Referenz zur User-DB users.id)',
+  `author_id` INT NOT NULL COMMENT 'Autor (ID-Referenz zur User-DB users.id)',
   `image_path` VARCHAR(500) NULL COMMENT 'Pfad zum News-Bild',
   `is_published` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'Veröffentlicht (FALSE=Entwurf, TRUE=veröffentlicht)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Erstellungszeitpunkt',
@@ -193,11 +193,11 @@ COMMENT='News und Ankündigungen';
 -- Beschreibung: System-Logs für administrative Aktionen
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `system_logs` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL COMMENT 'Benutzer, der die Aktion durchgeführt hat (Referenz auf User-DB users.id)',
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL COMMENT 'Benutzer, der die Aktion durchgeführt hat (Referenz auf User-DB users.id)',
   `action` VARCHAR(100) NOT NULL COMMENT 'Aktionstyp (create, update, delete)',
   `target_type` VARCHAR(100) NOT NULL COMMENT 'Zieltyp (inventory, news, alumni, project, event)',
-  `target_id` INT(11) NOT NULL COMMENT 'ID des Zielobjekts',
+  `target_id` INT NOT NULL COMMENT 'ID des Zielobjekts',
   `details` TEXT NULL COMMENT 'Zusätzliche Details zur Aktion (JSON)',
   `ip_address` VARCHAR(45) NULL COMMENT 'IP-Adresse des Benutzers',
   `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -226,9 +226,10 @@ INSERT INTO `inventory_categories` (`id`, `key_name`, `display_name`, `is_active
 (6, 'decoration', 'Dekoration', TRUE, '2026-01-01 10:00:00'),
 (7, 'technology', 'Technik', TRUE, '2026-01-01 10:00:00'),
 (8, 'office', 'Büromaterial', TRUE, '2026-01-01 10:00:00')
+AS new_data
 ON DUPLICATE KEY UPDATE
-  `display_name` = VALUES(`display_name`),
-  `is_active` = VALUES(`is_active`);
+  `display_name` = new_data.`display_name`,
+  `is_active` = new_data.`is_active`;
 
 -- ---------------------------------------------------------------------
 -- Inventar-Standorte
@@ -239,9 +240,10 @@ INSERT INTO `inventory_locations` (`id`, `name`, `is_active`, `created_at`) VALU
 (2, 'Büro München', TRUE, '2026-01-01 10:00:00'),
 (3, 'Eventlager', TRUE, '2026-01-01 10:00:00'),
 (4, 'Externe Lagerung', TRUE, '2026-01-01 10:00:00')
+AS new_data
 ON DUPLICATE KEY UPDATE
-  `name` = VALUES(`name`),
-  `is_active` = VALUES(`is_active`);
+  `name` = new_data.`name`,
+  `is_active` = new_data.`is_active`;
 
 -- ---------------------------------------------------------------------
 -- Test-Event: Sommerfest 2026
@@ -279,11 +281,12 @@ INSERT INTO `events` (
   1,
   '2026-01-01 10:00:00',
   '2026-01-01 10:00:00'
-) ON DUPLICATE KEY UPDATE
-  `title` = VALUES(`title`),
-  `description` = VALUES(`description`),
-  `date` = VALUES(`date`),
-  `location` = VALUES(`location`);
+) AS new_data
+ON DUPLICATE KEY UPDATE
+  `title` = new_data.`title`,
+  `description` = new_data.`description`,
+  `date` = new_data.`date`,
+  `location` = new_data.`location`;
 
 -- ---------------------------------------------------------------------
 -- Helfer-Slots für Sommerfest
@@ -300,10 +303,11 @@ INSERT INTO `event_helper_slots` (
 (1, 1, 'Catering', 4, 'Unterstützung beim Aufbau und Betrieb des Grillbuffets. Helfer sollten zwischen 13:00 und 17:00 Uhr verfügbar sein.', '2026-01-01 10:00:00'),
 (2, 1, 'Aufbau', 6, 'Aufbau von Tischen, Stühlen und Dekoration. Helfer werden von 12:00 bis 14:00 Uhr benötigt.', '2026-01-01 10:00:00'),
 (3, 1, 'Abbau', 4, 'Abbau und Aufräumen nach dem Event. Helfer werden ab 22:00 Uhr für ca. 2 Stunden benötigt.', '2026-01-01 10:00:00')
+AS new_data
 ON DUPLICATE KEY UPDATE
-  `task_name` = VALUES(`task_name`),
-  `required_helpers` = VALUES(`required_helpers`),
-  `description` = VALUES(`description`);
+  `task_name` = new_data.`task_name`,
+  `required_helpers` = new_data.`required_helpers`,
+  `description` = new_data.`description`;
 
 -- ---------------------------------------------------------------------
 -- Beispiel-Inventar-Artikel
@@ -328,10 +332,11 @@ INSERT INTO `inventory` (
 (2, 'Klappstühle weiß', 5, 3, 50, 12.50, 1, 'active', 'Weiße Klappstühle für Events und Veranstaltungen.', NULL, 1, '2026-01-01 10:00:00', '2026-01-01 10:00:00'),
 (3, 'Einweg-Becher 0,4l', 2, 1, 500, 0.15, 1, 'active', 'Recyclebare Einweg-Becher für Getränke.', NULL, 1, '2026-01-01 10:00:00', '2026-01-01 10:00:00'),
 (4, 'Mineralwasser 1,0l', 1, 1, 100, 0.35, 1, 'active', 'Mineralwasser in 1-Liter-Flaschen (Kiste à 12 Flaschen).', NULL, 1, '2026-01-01 10:00:00', '2026-01-01 10:00:00')
+AS new_data
 ON DUPLICATE KEY UPDATE
-  `name` = VALUES(`name`),
-  `quantity` = VALUES(`quantity`),
-  `purchase_price` = VALUES(`purchase_price`);
+  `name` = new_data.`name`,
+  `quantity` = new_data.`quantity`,
+  `purchase_price` = new_data.`purchase_price`;
 
 -- ---------------------------------------------------------------------
 -- Beispiel-Projekt: Digitalisierungs-Workshop
@@ -378,10 +383,11 @@ INSERT INTO `projects` (
   1,
   '2026-01-01 10:00:00',
   '2026-01-01 10:00:00'
-) ON DUPLICATE KEY UPDATE
-  `title` = VALUES(`title`),
-  `description` = VALUES(`description`),
-  `status` = VALUES(`status`);
+) AS new_data
+ON DUPLICATE KEY UPDATE
+  `title` = new_data.`title`,
+  `description` = new_data.`description`,
+  `status` = new_data.`status`;
 
 -- ---------------------------------------------------------------------
 -- Beispiel-News: Willkommen im neuen Intranet
@@ -428,9 +434,10 @@ INSERT INTO `news` (
   TRUE,
   '2026-01-01 10:00:00',
   '2026-01-01 10:00:00'
-) ON DUPLICATE KEY UPDATE
-  `title` = VALUES(`title`),
-  `content` = VALUES(`content`);
+) AS new_data
+ON DUPLICATE KEY UPDATE
+  `title` = new_data.`title`,
+  `content` = new_data.`content`;
 
 -- =====================================================================
 -- ENDE DER CONTENT-DATENBANK SETUP
