@@ -315,7 +315,9 @@ document.querySelectorAll('.delete-invitation-btn').forEach(btn => {
         const invitationId = this.dataset.invitationId;
         const invitationEmail = this.dataset.invitationEmail;
         
-        if (!confirm(`Möchten Sie die Einladung für "${invitationEmail}" wirklich löschen?`)) {
+        // Escape the email for safe display in confirm dialog
+        const escapedEmail = invitationEmail.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        if (!confirm(`Möchten Sie die Einladung für "${escapedEmail}" wirklich löschen?`)) {
             return;
         }
         
