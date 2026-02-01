@@ -811,6 +811,9 @@ class Auth {
         $permissions = [
             'vorstand' => ['*'], // Full access
             'admin' => ['*'], // Full access
+            '1v' => ['*'], // Full access - First board member
+            '2v' => ['*'], // Full access - Second board member
+            '3v' => ['*'], // Full access - Third board member
             'ressortleiter' => ['edit_news', 'edit_projects', 'edit_events', 'apply_projects', 'edit_own_profile', 'edit_inventory'],
             'alumni' => ['edit_own_profile', 'edit_inventory'],
             'mitglied' => ['edit_own_profile', 'apply_projects'],

@@ -408,7 +408,7 @@ $displayName = getUserDisplayName();
     <?php if (isset($auth) && $auth->isLoggedIn()): ?>
         <?php 
         $userRole = $_SESSION['role'] ?? 'none';
-        $isAdminRole = in_array($userRole, ['admin', 'vorstand', 'ressortleiter'], true);
+        $isAdminRole = in_array($userRole, ['admin', 'vorstand', '1v', '2v', '3v', 'ressortleiter'], true);
         ?>
         <?php if ($isAdminRole): ?>
             <button class="btn btn-warning position-fixed bottom-0 end-0 m-3 rounded-circle" 
