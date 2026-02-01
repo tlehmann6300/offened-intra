@@ -404,13 +404,14 @@ $displayName = getUserDisplayName();
     </nav>
     <?php endif; ?>
     
-    <!-- Edit Mode FAB (Floating Action Button) - Only for admins -->
+    <!-- Edit Mode FAB (Floating Action Button) - Only for super-admins -->
     <?php if (isset($auth) && $auth->isLoggedIn()): ?>
         <?php if ($auth->hasFullAccess()): ?>
-            <button class="btn btn-warning position-fixed bottom-0 end-0 m-3 rounded-circle" 
+            <button class="btn btn-warning position-fixed bottom-0 end-0 m-3 rounded-circle<?php echo $editModeActive ? ' active' : ''; ?>" 
                     style="width: 56px; height: 56px; z-index: 1030;"
                     type="button" 
-                    id="edit-mode-fab" 
+                    id="edit-mode-fab"
+                    data-edit-mode-active="<?php echo $editModeActive ? 'true' : 'false'; ?>"
                     title="Edit-Modus umschalten"
                     aria-label="Edit-Modus umschalten">
                 <i class="fas fa-pen"></i>
