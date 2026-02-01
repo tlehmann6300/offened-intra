@@ -54,7 +54,7 @@ try {
     $stmt = $userPdo->query("DESCRIBE users");
     $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
-    $totpFields = ['totp_secret', 'totp_enabled', 'totp_verified_at'];
+    $totpFields = ['tfa_secret', 'tfa_enabled', 'totp_verified_at'];
     $hasTotpFields = count(array_intersect($totpFields, $columns)) === count($totpFields);
     
     if ($hasTotpFields) {
