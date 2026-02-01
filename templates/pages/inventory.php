@@ -456,7 +456,7 @@ if (!is_array($allCategories)) {
         
         <div class="col-md-6 mb-3">
             <h6 class="text-muted mb-2">Standort filtern:</h6>
-            <select class="form-select form-select-lg" id="locationFilter" aria-label="Standort filtern" style="min-height: 44px;">
+            <select class="form-select form-select-lg form-select-touch" id="locationFilter" aria-label="Standort filtern">
                 <option value="all" selected>Alle Standorte</option>
                 <option value="Keller vorne H-1.87">Keller vorne H-1.87</option>
                 <option value="Keller hinten H-1.88">Keller hinten H-1.88</option>
@@ -662,12 +662,11 @@ if (!is_array($allCategories)) {
                                 <div class="mobile-quantity-controls d-lg-none mt-3 mb-3">
                                     <div class="d-flex align-items-center justify-content-center gap-3">
                                         <button type="button" 
-                                                class="btn btn-lg btn-outline-danger quantity-btn" 
+                                                class="btn btn-lg btn-outline-danger quantity-btn btn-touch" 
                                                 data-action="adjust-quantity"
                                                 data-item-id="<?php echo $item['id']; ?>"
                                                 data-adjustment="-1"
                                                 title="Menge verringern"
-                                                style="min-width: 44px; min-height: 44px;"
                                                 <?php echo ($item['quantity'] <= 0) ? 'disabled' : ''; ?>>
                                             <i class="fas fa-minus"></i>
                                         </button>
@@ -675,20 +674,18 @@ if (!is_array($allCategories)) {
                                             <?php echo $item['quantity']; ?>
                                         </span>
                                         <button type="button" 
-                                                class="btn btn-lg btn-outline-success quantity-btn" 
+                                                class="btn btn-lg btn-outline-success quantity-btn btn-touch" 
                                                 data-action="adjust-quantity"
                                                 data-item-id="<?php echo $item['id']; ?>"
                                                 data-adjustment="1"
-                                                title="Menge erhöhen"
-                                                style="min-width: 44px; min-height: 44px;">
+                                                title="Menge erhöhen">
                                             <i class="fas fa-plus"></i>
                                         </button>
                                         <button type="button" 
-                                                class="btn btn-outline-info" 
+                                                class="btn btn-outline-info btn-touch" 
                                                 data-action="quantity-comment"
                                                 data-item-id="<?php echo $item['id']; ?>"
-                                                title="Änderung mit Kommentar"
-                                                style="min-width: 44px; min-height: 44px;">
+                                                title="Änderung mit Kommentar">
                                             <i class="fas fa-comment"></i>
                                         </button>
                                     </div>
@@ -897,7 +894,7 @@ if (!is_array($allCategories)) {
         <!-- Location Filter -->
         <div class="mb-4">
             <h6 class="text-muted mb-2">Standort filtern:</h6>
-            <select class="form-select form-select-lg" id="locationFilterMobile" aria-label="Standort filtern" style="min-height: 44px;">
+            <select class="form-select form-select-lg form-select-touch" id="locationFilterMobile" aria-label="Standort filtern">
                 <option value="all" selected>Alle Standorte</option>
                 <option value="Keller vorne H-1.87">Keller vorne H-1.87</option>
                 <option value="Keller hinten H-1.88">Keller hinten H-1.88</option>
@@ -1126,6 +1123,16 @@ if (!is_array($allCategories)) {
     background: rgba(108, 92, 231, 0.9);
     color: white;
     border-color: rgba(108, 92, 231, 1);
+}
+
+/* Touch-friendly button sizes */
+.btn-touch {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.form-select-touch {
+    min-height: 44px;
 }
 </style>
 
