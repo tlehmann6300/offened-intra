@@ -1318,37 +1318,9 @@ class Inventory {
             // Get unique user IDs
             $userIds = array_unique(array_column($logs, 'user_id'));
             
-            // Fetch user data from User-DB using DatabaseManager
-            $userPdo = DatabaseManager::getUserConnection();
-            $userData = [];
-            
-            if (!empty($userIds)) {
-                $placeholders = implode(',', array_fill(0, count($userIds), '?'));
-                $userStmt = $userPdo->prepare("
-                    SELECT id, firstname, lastname, email
-                    FROM users
-                    WHERE id IN ($placeholders)
-                ");
-                $userStmt->execute($userIds);
-                
-                while ($user = $userStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $userData[$user['id']] = $user;
-                }
-            }
-            
-            // Merge user data into logs
-            foreach ($logs as &$log) {
-                $userId = $log['user_id'];
-                if (isset($userData[$userId])) {
-                    $log['firstname'] = $userData[$userId]['firstname'];
-                    $log['lastname'] = $userData[$userId]['lastname'];
-                    $log['email'] = $userData[$userId]['email'];
-                } else {
-                    $log['firstname'] = null;
-                    $log['lastname'] = null;
-                    $log['email'] = null;
-                }
-            }
+            // Fetch user data from User-DB and merge into logs
+            $userData = $this->fetchUserData($userIds);
+            $this->mergeUserDataIntoLogs($logs, $userData);
             
             return $logs;
         } catch (PDOException $e) {
@@ -1385,42 +1357,71 @@ class Inventory {
             // Get unique user IDs
             $userIds = array_unique(array_column($logs, 'user_id'));
             
-            // Fetch user data from User-DB using DatabaseManager
-            $userPdo = DatabaseManager::getUserConnection();
-            $userData = [];
-            
-            if (!empty($userIds)) {
-                $placeholders = implode(',', array_fill(0, count($userIds), '?'));
-                $userStmt = $userPdo->prepare("
-                    SELECT id, firstname, lastname, email
-                    FROM users
-                    WHERE id IN ($placeholders)
-                ");
-                $userStmt->execute($userIds);
-                
-                while ($user = $userStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $userData[$user['id']] = $user;
-                }
-            }
-            
-            // Merge user data into logs
-            foreach ($logs as &$log) {
-                $userId = $log['user_id'];
-                if (isset($userData[$userId])) {
-                    $log['firstname'] = $userData[$userId]['firstname'];
-                    $log['lastname'] = $userData[$userId]['lastname'];
-                    $log['email'] = $userData[$userId]['email'];
-                } else {
-                    $log['firstname'] = null;
-                    $log['lastname'] = null;
-                    $log['email'] = null;
-                }
-            }
+            // Fetch user data from User-DB and merge into logs
+            $userData = $this->fetchUserData($userIds);
+            $this->mergeUserDataIntoLogs($logs, $userData);
             
             return $logs;
         } catch (PDOException $e) {
             error_log("Error fetching inventory history: " . $e->getMessage());
             return [];
+        }
+    }
+    
+    /**
+     * Fetch user data from User-DB for given user IDs
+     * 
+     * @param array $userIds Array of user IDs
+     * @return array Associative array with user_id as key and user data as value
+     */
+    private function fetchUserData(array $userIds): array {
+        $userData = [];
+        
+        if (empty($userIds)) {
+            return $userData;
+        }
+        
+        try {
+            // Fetch user data from User-DB using DatabaseManager
+            $userPdo = DatabaseManager::getUserConnection();
+            
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+            $userStmt = $userPdo->prepare("
+                SELECT id, firstname, lastname, email
+                FROM users
+                WHERE id IN ($placeholders)
+            ");
+            $userStmt->execute($userIds);
+            
+            while ($user = $userStmt->fetch(PDO::FETCH_ASSOC)) {
+                $userData[$user['id']] = $user;
+            }
+        } catch (PDOException $e) {
+            error_log("Error fetching user data: " . $e->getMessage());
+        }
+        
+        return $userData;
+    }
+    
+    /**
+     * Merge user data into log entries
+     * 
+     * @param array $logs Log entries (passed by reference)
+     * @param array $userData User data indexed by user ID
+     * @return void
+     */
+    private function mergeUserDataIntoLogs(array &$logs, array $userData): void {
+        foreach ($logs as &$log) {
+            $userId = $log['user_id'] ?? null;
+            if ($userId !== null && isset($userData[$userId])) {
+                $log['firstname'] = $userData[$userId]['firstname'];
+                $log['lastname'] = $userData[$userId]['lastname'];
+                $log['email'] = $userData[$userId]['email'];
+            } else {
+                $log['firstname'] = null;
+                $log['lastname'] = null;
+                $log['email'] = null;
+            }
         }
     }
     
