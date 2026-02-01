@@ -27,8 +27,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Check if user has permission (admin, vorstand, or ressortleiter)
-$allowedRoles = ['admin', 'vorstand', 'ressortleiter'];
+// Check if user has permission (admin, vorstand, 1v, 2v, 3v, alumni-vorstand, or ressortleiter)
+$allowedRoles = ['admin', 'vorstand', '1v', '2v', '3v', 'alumni-vorstand', 'ressortleiter'];
 $userRole = $_SESSION['role'] ?? 'none';
 
 if (!in_array($userRole, $allowedRoles, true)) {

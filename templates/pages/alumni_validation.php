@@ -1,7 +1,8 @@
 <?php
 /**
  * Alumni Validation Interface
- * Only accessible for roles with full access (admin, vorstand, 1V, 2V, 3V)
+ * Only accessible for super-admin roles with full access:
+ * - admin, 1V, 2V, 3V, alumni-vorstand, vorstand
  * 
  * Features:
  * - List of pending alumni validations (is_alumni_validated = FALSE)
@@ -11,6 +12,7 @@
  */
 
 // Check if user has permission to access this page
+// Only super-admins (admin, 1V, 2V, 3V, alumni-vorstand, vorstand) can access
 if (!$auth->hasFullAccess()) {
     header('Location: index.php?page=home');
     exit;
