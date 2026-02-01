@@ -144,7 +144,7 @@ $displayName = getUserDisplayName();
                         <!-- Admin/Vorstand Links -->
                         <?php if ($auth->can('edit_news') || $auth->can('edit_projects') || $auth->can('edit_events')): ?>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle<?php echo (in_array($currentPage, ['admin_dashboard', 'news_editor', 'project_management', 'event_management'], true)) ? ' active' : ''; ?>" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle<?php echo (in_array($currentPage, ['admin_dashboard', 'news_editor', 'project_management', 'event_management', 'user_management', 'inventory_audit'], true)) ? ' active' : ''; ?>" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-cog me-1"></i>Verwaltung
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="adminDropdown">
@@ -158,6 +158,11 @@ $displayName = getUserDisplayName();
                                 <?php endif; ?>
                                 <?php if ($auth->can('edit_events')): ?>
                                     <li><a class="dropdown-item<?php echo ($currentPage === 'event_management') ? ' active' : ''; ?>" href="index.php?page=event_management"><i class="fas fa-calendar-alt me-2"></i>Event-Verwaltung</a></li>
+                                <?php endif; ?>
+                                <?php if ($auth->hasFullAccess()): ?>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item<?php echo ($currentPage === 'user_management') ? ' active' : ''; ?>" href="index.php?page=user_management"><i class="fas fa-users-cog me-2"></i>Benutzerverwaltung</a></li>
+                                    <li><a class="dropdown-item<?php echo ($currentPage === 'inventory_audit') ? ' active' : ''; ?>" href="index.php?page=inventory_audit"><i class="fas fa-history me-2"></i>Inventar-Audit</a></li>
                                 <?php endif; ?>
                             </ul>
                         </li>
@@ -323,12 +328,14 @@ $displayName = getUserDisplayName();
                     'project_management' => ['Projekte', 'fas fa-briefcase', 'Verwaltung'],
                     'inventory' => ['Inventar', 'fas fa-boxes'],
                     'inventory_config' => ['Inventar', 'fas fa-boxes', 'Konfiguration'],
+                    'inventory_audit' => ['Inventar', 'fas fa-boxes', 'Audit'],
                     'alumni_database' => ['Alumni', 'fas fa-user-graduate'],
                     'alumni' => ['Alumni', 'fas fa-user-graduate'],
                     'alumni_modern' => ['Alumni', 'fas fa-user-graduate'],
                     'settings' => ['Einstellungen', 'fas fa-cog'],
                     'admin_dashboard' => ['Verwaltung', 'fas fa-cog', 'Dashboard'],
                     'news_editor' => ['Verwaltung', 'fas fa-cog', 'News Editor'],
+                    'user_management' => ['Verwaltung', 'fas fa-cog', 'Benutzerverwaltung'],
                     'newsroom' => ['News', 'fas fa-newspaper'],
                 ];
                 
