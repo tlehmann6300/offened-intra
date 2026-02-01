@@ -99,6 +99,15 @@ try {
     // Prepare search term for LIKE queries
     $searchTerm = '%' . $query . '%';
     
+    // Type label mapping for result categorization
+    $typeLabels = [
+        'inventory' => '[Inventar]',
+        'user' => '[Person]',
+        'news' => '[News]',
+        'event' => '[Event]',
+        'project' => '[Projekt]'
+    ];
+    
     // ===========================================================================
     // STEP 1: Query User Database (users, alumni_profiles)
     // Limit to Top 5 results per category for performance
@@ -354,25 +363,8 @@ try {
                 break;
         }
         
-        // Get type label for display
-        $typeLabel = '';
-        switch ($type) {
-            case 'inventory':
-                $typeLabel = '[Inventar]';
-                break;
-            case 'user':
-                $typeLabel = '[Person]';
-                break;
-            case 'news':
-                $typeLabel = '[News]';
-                break;
-            case 'event':
-                $typeLabel = '[Event]';
-                break;
-            case 'project':
-                $typeLabel = '[Projekt]';
-                break;
-        }
+        // Get type label for display using mapping
+        $typeLabel = $typeLabels[$type] ?? '';
         
         // Add to grouped results with explicit type label
         $groupedResults[$type][] = [
