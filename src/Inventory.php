@@ -1379,6 +1379,20 @@ class Inventory {
             ");
             $logStmt->execute([$id, $userId, $change, $comment]);
             
+            // Log to system_logs table for administrative tracking
+            $systemLogMessage = "User {$userId} hat Bestand von {$item['name']} um {$change} geändert";
+            $systemLogStmt = $this->pdo->prepare("
+                INSERT INTO system_logs (user_id, action, target_type, target_id, details)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $systemLogStmt->execute([
+                $userId,
+                'update',
+                'inventory',
+                $id,
+                $systemLogMessage
+            ]);
+            
             // Commit transaction only if we started it
             if (!$alreadyInTransaction) {
                 $this->pdo->commit();
