@@ -115,11 +115,12 @@ AddDefaultCharset UTF-8
 # PHP settings
 # IMPORTANT: Some hosting providers do not allow php_value in .htaccess
 # If you encounter a 500 error, comment out the entire block below
-<IfModule mod_php.c>
-    php_value upload_max_filesize 5M
-    php_value post_max_size 6M
-    php_value max_execution_time 60
-</IfModule>
+# DISABLED: Commented out due to hosting provider restrictions causing HTTP 500 error
+# <IfModule mod_php.c>
+#     php_value upload_max_filesize 5M
+#     php_value post_max_size 6M
+#     php_value max_execution_time 60
+# </IfModule>
 
 # Alternative PHP settings using php_flag (for PHP 7+)
 # Uncomment if the above doesn't work:
