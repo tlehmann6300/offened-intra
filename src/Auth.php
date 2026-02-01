@@ -269,7 +269,7 @@ class Auth {
             
             // Fetch user from database
             $stmt = $this->pdo->prepare("
-                SELECT id, email, role, password, firstname, lastname, totp_secret, totp_enabled 
+                SELECT id, email, role, password, firstname, lastname, tfa_secret as totp_secret, tfa_enabled as totp_enabled 
                 FROM users 
                 WHERE email = ?
             ");
@@ -458,7 +458,7 @@ class Auth {
             // Enable TOTP for the user
             $stmt = $this->pdo->prepare("
                 UPDATE users 
-                SET totp_secret = ?, totp_enabled = 1, totp_verified_at = NOW() 
+                SET tfa_secret = ?, tfa_enabled = 1, totp_verified_at = NOW() 
                 WHERE id = ?
             ");
             $stmt->execute([$secret, $userId]);
@@ -502,7 +502,7 @@ class Auth {
             // Disable TOTP for the user
             $stmt = $this->pdo->prepare("
                 UPDATE users 
-                SET totp_secret = NULL, totp_enabled = 0, totp_verified_at = NULL 
+                SET tfa_secret = NULL, tfa_enabled = 0, totp_verified_at = NULL 
                 WHERE id = ?
             ");
             $stmt->execute([$userId]);
@@ -542,7 +542,7 @@ class Auth {
      */
     public function isTotpEnabled(int $userId): bool {
         try {
-            $stmt = $this->pdo->prepare("SELECT totp_enabled FROM users WHERE id = ?");
+            $stmt = $this->pdo->prepare("SELECT tfa_enabled FROM users WHERE id = ?");
             $stmt->execute([$userId]);
             $result = $stmt->fetchColumn();
             return (bool)$result;
