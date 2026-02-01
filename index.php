@@ -10,11 +10,12 @@ declare(strict_types=1);
  */
 
 // -------------------------------------------------------------------
-// 1. BASIC SETUP
+// 1. BASIC SETUP & DEBUG MODE
 // -------------------------------------------------------------------
-// Note: Error display should be configured via environment variables in production
+// DEBUGGING: Enable error display to see actual error messages instead of generic 500 errors
+// PRODUCTION: Set display_errors to '0' after debugging is complete
 error_reporting(E_ALL);
-ini_set('display_errors', '0'); // Disabled for production security
+ini_set('display_errors', '1'); // Enabled for debugging - disable in production
 ini_set('log_errors', '1');
 
 // Define base directory
@@ -68,11 +69,21 @@ require_once $autoloadPath;
 // 3. LOAD CONFIGURATION AND AUTH
 // -------------------------------------------------------------------
 
-// Check for .env file existence (optional but recommended)
+// Check for .env file existence and load it safely (optional but recommended)
+// If .env is missing, the application will continue with defaults from config files
 $envPath = BASE_DIR . '/.env';
-if (!file_exists($envPath)) {
+if (file_exists($envPath)) {
+    try {
+        // Load .env file safely with Dotenv
+        $dotenv = Dotenv\Dotenv::createImmutable(BASE_DIR);
+        $dotenv->load();
+    } catch (Exception $e) {
+        error_log("WARNING: Failed to load .env file: " . $e->getMessage() . " - Using default configuration values");
+        // Application continues with defaults - do not crash
+    }
+} else {
     error_log("WARNING: .env file not found at " . $envPath . " - Using default configuration values");
-    // Note: Application can still work with defaults from config.php, but log the warning
+    // Note: Application can still work with defaults from config.php
 }
 
 // Load configuration with robust path checking

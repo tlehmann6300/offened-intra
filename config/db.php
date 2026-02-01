@@ -7,10 +7,16 @@ declare(strict_types=1);
  * Uses environment variables from .env file
  */
 
-// Load environment variables from .env file
+// Load environment variables from .env file safely
+// Application continues with defaults if .env is missing or fails to load
 if (file_exists(__DIR__ . '/../.env')) {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-    $dotenv->load();
+    try {
+        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
+        $dotenv->load();
+    } catch (Exception $e) {
+        // Log the error but don't crash - use defaults
+        error_log("WARNING: Failed to load .env file in db.php: " . $e->getMessage());
+    }
 }
 
 // Content Database credentials (Projekte, Inventar, Events, News)
@@ -226,12 +232,17 @@ class DatabaseManager {
             $pdo = new PDO($dsn, $user, $pass, $options);
             return $pdo;
         } catch (PDOException $e) {
-            // Log error securely
-            error_log("Database connection failed ({$label}): " . $e->getMessage());
+            // Log error securely with detailed information for debugging
+            $errorMsg = "DB Connection Error ({$label}): " . $e->getMessage();
+            error_log($errorMsg);
             
-            // Show user-friendly error page
+            // Show user-friendly error page with debug info when display_errors is enabled
             http_response_code(503);
             header('Content-Type: text/html; charset=utf-8');
+            
+            // Check if we should display detailed error (based on ini setting)
+            $showDetails = ini_get('display_errors') === '1';
+            
             echo '<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -284,18 +295,41 @@ class DatabaseManager {
             margin-top: 20px;
             font-size: 14px;
         }
+        .debug-info {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 13px;
+            font-family: monospace;
+            color: #856404;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body>
     <div class="error-container">
         <div class="logo">IBC</div>
         <div class="icon">🗄️</div>
-        <h1>Datenbankfehler</h1>
-        <p>Das IBC-Intranet ist vorübergehend nicht verfügbar.</p>
-        <p>Bitte wenden Sie sich an die IT-Abteilung oder den Systemadministrator.</p>
-        <div class="contact">
+        <h1>Datenbankverbindungsfehler</h1>
+        <p>Das IBC-Intranet konnte keine Verbindung zur Datenbank herstellen.</p>
+        <p><strong>Betroffene Datenbank:</strong> ' . htmlspecialchars($label) . '</p>';
+            
+            if ($showDetails) {
+                echo '<div class="debug-info">
+                    <strong>Debug-Information:</strong><br>
+                    Host: ' . htmlspecialchars($host) . '<br>
+                    Datenbank: ' . htmlspecialchars($dbName) . '<br>
+                    Benutzer: ' . htmlspecialchars($user) . '<br>
+                    Fehler: ' . htmlspecialchars($e->getMessage()) . '
+                </div>';
+            }
+            
+            echo '<div class="contact">
             <strong>Support kontaktieren</strong><br>
-            Bei anhaltenden Problemen wenden Sie sich bitte an die IT-Abteilung.
+            Bitte wenden Sie sich an die IT-Abteilung oder den Systemadministrator.
         </div>
     </div>
 </body>
