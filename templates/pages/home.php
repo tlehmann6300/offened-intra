@@ -26,17 +26,21 @@ $latestNews = $news->getLatest(3);
 $nextEvent = $event->getNextEvent();
 $latestProjects = $project->getLatest(3);
 
-// Get inventory statistics for teaser
+// Get inventory statistics for teaser - lightweight queries only
 $inventoryStats = [
     'total_items' => 0,
     'low_stock' => 0
 ];
 try {
-    $allInventoryItems = $inventory->getAll();
-    $inventoryStats['total_items'] = count($allInventoryItems);
-    $inventoryStats['low_stock'] = count(array_filter($allInventoryItems, function($item) {
-        return isset($item['quantity']) && $item['quantity'] < LOW_STOCK_THRESHOLD;
-    }));
+    // Use direct COUNT queries instead of loading all items
+    $stmt = $pdo->query("SELECT COUNT(*) as total FROM inventory WHERE status = 'active'");
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $inventoryStats['total_items'] = $result ? (int)$result['total'] : 0;
+    
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM inventory WHERE status = 'active' AND quantity < ?");
+    $stmt->execute([LOW_STOCK_THRESHOLD]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $inventoryStats['low_stock'] = $result ? (int)$result['total'] : 0;
 } catch (Exception $e) {
     error_log("Error fetching inventory stats: " . $e->getMessage());
 }
@@ -265,6 +269,13 @@ $firstname = $auth->getFirstname() ?? 'Benutzer';
                     <div class="text-center mt-3">
                         <small class="text-muted">Verwalten Sie Ihr Inventar und behalten Sie den Überblick</small>
                     </div>
+                    <?php if ($auth->hasFullAccess()): ?>
+                        <div class="text-center mt-3 pt-3 border-top">
+                            <a href="index.php?page=inventory_audit" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="fas fa-history me-2"></i>Inventar-Audit
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -297,6 +308,13 @@ $firstname = $auth->getFirstname() ?? 'Benutzer';
                     <div class="text-center mt-3">
                         <small class="text-muted">Vernetzen Sie sich mit ehemaligen Mitgliedern</small>
                     </div>
+                    <?php if ($auth->hasFullAccess()): ?>
+                        <div class="text-center mt-3 pt-3 border-top">
+                            <a href="index.php?page=alumni_validation" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="fas fa-user-check me-2"></i>Alumni-Validierung
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
