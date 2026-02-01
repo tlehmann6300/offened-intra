@@ -898,10 +898,10 @@ class Auth {
         'alumni' => 1,        // Alumni - lowest active role, requires validation
         'mitglied' => 2,      // Regular member
         'ressortleiter' => 3, // Department leader
-        'alumni-vorstand' => 4, // Alumni board member - Super-Admin
         '3v' => 5,            // Third board member (3. Vorstand) - Super-Admin
         '2v' => 6,            // Second board member (2. Vorstand) - Super-Admin
         '1v' => 7,            // First board member (1. Vorstand) - Super-Admin
+        'alumni-vorstand' => 7, // Alumni board member - Super-Admin (same level as 1V)
         'vorstand' => 8,      // Board member (general vorstand)
         'admin' => 9,         // Full system access - Super-Admin
     ];
