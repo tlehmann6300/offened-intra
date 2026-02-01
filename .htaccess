@@ -3,6 +3,9 @@
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    
+    # IMPORTANT: RewriteBase is required for proper routing on some hosting providers
+    # This ensures that URL rewriting works correctly regardless of the installation path
     RewriteBase /
     
     # SECURITY: Hard deny access to .env file
@@ -58,7 +61,17 @@
 </IfModule>
 
 # Disable directory browsing
+# NOTE: Some hosting providers (like IONOS) may not allow Options directive in .htaccess
+# If you get a 500 error, comment out the following line
 Options -Indexes
+
+# NOTE: Options +FollowSymLinks may cause 500 errors on some hosting providers
+# Commenting out to ensure compatibility with IONOS and similar hosts
+# Options +FollowSymLinks
+
+# NOTE: Options -MultiViews may cause 500 errors on some hosting providers
+# Commenting out to ensure compatibility with IONOS and similar hosts
+# Options -MultiViews
 
 # Versteckt Apache-Serverinfos
 ServerSignature Off

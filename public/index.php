@@ -8,13 +8,13 @@ declare(strict_types=1);
  */
 
 // -------------------------------------------------------------------
-// 1. KONFIGURATION & LOGGING
+// 1. DEBUG MODE & ERROR CONFIGURATION
 // -------------------------------------------------------------------
-// Initial error configuration - will be overridden by config.php based on APP_ENV
-// For safety, disable error display initially (production-safe default)
-ini_set('display_errors', '0');
-ini_set('log_errors', '1');
+// DEBUGGING: Enable error display to see actual error messages instead of generic 500 errors
+// PRODUCTION: Set display_errors to '0' after debugging is complete
 error_reporting(E_ALL);
+ini_set('display_errors', '1'); // Enabled for debugging - disable in production
+ini_set('log_errors', '1');
 
 // Define base directory first
 $baseDir = dirname(__DIR__);
@@ -86,13 +86,36 @@ if (!file_exists($autoloadPath)) {
             <h1>Setup Fehler</h1>
             <p>Der <code>vendor</code> Ordner wurde nicht gefunden.</p>
             <p><strong>System-Pfad:</strong> ' . htmlspecialchars($baseDir) . '</p>
-            <p>Bitte prüfen Sie, ob der Ordner <code>vendor</code> im Hauptverzeichnis liegt (neben <code>public</code>, nicht darin!).</p>
+            <p>Bitte führen Sie <code>composer install</code> im Hauptverzeichnis aus.</p>
+            <p><strong>Hinweis:</strong> Der vendor Ordner muss im Hauptverzeichnis liegen (neben <code>public</code>, nicht darin!).</p>
          </div>');
 }
 require_once $autoloadPath;
 
 // -------------------------------------------------------------------
-// 3. CORE LADEN
+// 3. LOAD .ENV FILE (FAULT-TOLERANT)
+// -------------------------------------------------------------------
+
+// Check and load .env file safely (optional but recommended)
+// If .env is missing, the application will continue with defaults from config files
+$envFilePath = $baseDir . '/.env';
+if (file_exists($envFilePath)) {
+    try {
+        // Load .env file safely with Dotenv
+        $dotenv = Dotenv\Dotenv::createImmutable($baseDir);
+        $dotenv->load();
+        logMessage(".env file loaded successfully");
+    } catch (Exception $e) {
+        logMessage("WARNING: Failed to load .env file: " . $e->getMessage() . " - Using default configuration values", 'WARNING');
+        // Application continues with defaults - do not crash
+    }
+} else {
+    logMessage("WARNING: .env file not found at {$envFilePath} - Using default configuration values", 'WARNING');
+    // Note: Application can still work with defaults from config.php
+}
+
+// -------------------------------------------------------------------
+// 4. CORE LADEN
 // -------------------------------------------------------------------
 
 // Wichtige Systemdateien laden
@@ -124,7 +147,7 @@ try {
 }
 
 // -------------------------------------------------------------------
-// 4. ROUTING & SICHERHEIT
+// 5. ROUTING & SICHERHEIT
 // -------------------------------------------------------------------
 
 $page = $_GET['page'] ?? 'home';
@@ -181,7 +204,7 @@ if (!$isPublic) {
 }
 
 // -------------------------------------------------------------------
-// 5. VIEW LADEN (Templates)
+// 6. VIEW LADEN (Templates)
 // -------------------------------------------------------------------
 
 $templateDir = $baseDir . '/templates';
@@ -210,7 +233,7 @@ if (!file_exists($targetFile)) {
 }
 
 // -------------------------------------------------------------------
-// 6. AUSGABE RENDERN
+// 7. AUSGABE RENDERN
 // -------------------------------------------------------------------
 
 try {
