@@ -410,7 +410,7 @@ if (!is_array($allCategories)) {
                     <button type="button" class="btn btn-success btn-edit" data-bs-toggle="modal" data-bs-target="#inventoryModal" data-action="create-inventory">
                         <i class="fas fa-plus me-2"></i>Neuer Gegenstand
                     </button>
-                    <?php if (in_array($auth->getUserRole(), ['admin', 'vorstand', 'ressortleiter'], true)): ?>
+                    <?php if ($auth->hasFullAccess()): ?>
                         <a href="index.php?page=inventory_config" class="btn btn-outline-secondary btn-edit ms-2" title="Standorte und Kategorien verwalten">
                             <i class="fas fa-cog"></i>
                         </a>

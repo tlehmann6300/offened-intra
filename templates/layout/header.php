@@ -406,11 +406,7 @@ $displayName = getUserDisplayName();
     
     <!-- Edit Mode FAB (Floating Action Button) - Only for admins -->
     <?php if (isset($auth) && $auth->isLoggedIn()): ?>
-        <?php 
-        $userRole = $_SESSION['role'] ?? 'none';
-        $isAdminRole = in_array($userRole, ['admin', 'vorstand', 'ressortleiter'], true);
-        ?>
-        <?php if ($isAdminRole): ?>
+        <?php if ($auth->hasFullAccess()): ?>
             <button class="btn btn-warning position-fixed bottom-0 end-0 m-3 rounded-circle" 
                     style="width: 56px; height: 56px; z-index: 1030;"
                     type="button" 

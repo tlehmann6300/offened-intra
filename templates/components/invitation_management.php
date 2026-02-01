@@ -7,12 +7,11 @@
  * - View pending invitations
  * - Delete/cancel invitations
  * 
- * Only accessible for roles: admin, vorstand
+ * Only accessible for roles with full access (admin, vorstand, 1v, 2v, 3v)
  */
 
 // Check if user has permission
-$userRole = $auth->getUserRole();
-if (!in_array($userRole, ['admin', 'vorstand'], true)) {
+if (!$auth->hasFullAccess()) {
     return;
 }
 

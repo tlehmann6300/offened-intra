@@ -789,6 +789,25 @@ class Auth {
     }
     
     /**
+     * Get the permission matrix for all roles
+     * This is the single source of truth for role-based permissions
+     * 
+     * @return array<string, array<string>> Permission matrix
+     */
+    private function getPermissionMatrix(): array {
+        return [
+            'vorstand' => ['*'], // Full access
+            'admin' => ['*'], // Full access
+            '1v' => ['*'], // Full access - First board member
+            '2v' => ['*'], // Full access - Second board member
+            '3v' => ['*'], // Full access - Third board member
+            'ressortleiter' => ['edit_news', 'edit_projects', 'edit_events', 'apply_projects', 'edit_own_profile', 'edit_inventory'],
+            'alumni' => ['edit_own_profile', 'edit_inventory'],
+            'mitglied' => ['edit_own_profile', 'apply_projects'],
+        ];
+    }
+    
+    /**
      * Check if the current user has permission to perform an action
      * 
      * @param string $action The action to check permission for
@@ -807,14 +826,8 @@ class Auth {
             return true;
         }
         
-        // Define permission matrix
-        $permissions = [
-            'vorstand' => ['*'], // Full access
-            'admin' => ['*'], // Full access
-            'ressortleiter' => ['edit_news', 'edit_projects', 'edit_events', 'apply_projects', 'edit_own_profile', 'edit_inventory'],
-            'alumni' => ['edit_own_profile', 'edit_inventory'],
-            'mitglied' => ['edit_own_profile', 'apply_projects'],
-        ];
+        // Get permission matrix
+        $permissions = $this->getPermissionMatrix();
         
         // Check if role exists in permissions
         if (!isset($permissions[$role])) {
@@ -828,6 +841,46 @@ class Auth {
         
         // Check if role has specific permission
         return in_array($action, $permissions[$role], true);
+    }
+    
+    /**
+     * Check if the current user has full admin access (wildcard permissions)
+     * This method is useful for UI elements that should only be visible to admin roles
+     * 
+     * @return bool True if user has full admin access, false otherwise
+     */
+    public function hasFullAccess(): bool {
+        $role = $this->getUserRole();
+        
+        // If no role or role is 'none', deny access
+        if (!$role || $role === 'none') {
+            return false;
+        }
+        
+        // Get permission matrix
+        $permissions = $this->getPermissionMatrix();
+        
+        // Check if role has wildcard permission
+        return isset($permissions[$role]) && in_array('*', $permissions[$role], true);
+    }
+    
+    /**
+     * Check if the current user has access to admin areas
+     * This includes full access roles and department leaders (ressortleiter)
+     * 
+     * @return bool True if user has admin area access, false otherwise
+     */
+    public function hasAdminAccess(): bool {
+        $role = $this->getUserRole();
+        
+        // If no role or role is 'none', deny access
+        if (!$role || $role === 'none') {
+            return false;
+        }
+        
+        // Admin area access: full access roles or ressortleiter
+        $adminRoles = ['admin', 'vorstand', '1v', '2v', '3v', 'ressortleiter'];
+        return in_array($role, $adminRoles, true);
     }
     
     /**
