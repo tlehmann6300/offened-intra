@@ -28,18 +28,18 @@ USE `dbs15253086`;
 -- Beschreibung: Zentrale Benutzerverwaltung mit Authentication
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `users` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(255) NOT NULL,
   `password` VARCHAR(255) NOT NULL COMMENT 'Bcrypt-Hash des Passworts',
   `firstname` VARCHAR(100) NOT NULL,
   `lastname` VARCHAR(100) NOT NULL,
   `role` ENUM('admin', '1v', '2v', '3v', 'ressortleiter', 'mitglied', 'alumni') NOT NULL DEFAULT 'mitglied' COMMENT 'Rollen-Hierarchie: admin=1V, 1v-3v=Vorstand',
   `birthdate` DATE NULL COMMENT 'Geburtsdatum des Benutzers',
-  `notify_birthday` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Sichtbarkeit des Geburtstags auf Dashboard (1=sichtbar, 0=privat)',
+  `notify_birthday` TINYINT NOT NULL DEFAULT 1 COMMENT 'Sichtbarkeit des Geburtstags auf Dashboard (1=sichtbar, 0=privat)',
   `tfa_secret` VARCHAR(32) DEFAULT NULL COMMENT 'Base32-kodierter TOTP-Secret für 2FA',
-  `tfa_enabled` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Two-Factor Authentication aktiviert (0=deaktiviert, 1=aktiviert)',
+  `tfa_enabled` TINYINT NOT NULL DEFAULT 0 COMMENT 'Two-Factor Authentication aktiviert (0=deaktiviert, 1=aktiviert)',
   `totp_verified_at` TIMESTAMP NULL DEFAULT NULL COMMENT 'Zeitstempel der ersten 2FA-Verifizierung',
-  `is_alumni_validated` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Alumni-Status validiert durch Vorstand (0=ausstehend, 1=validiert)',
+  `is_alumni_validated` TINYINT NOT NULL DEFAULT 0 COMMENT 'Alumni-Status validiert durch Vorstand (0=ausstehend, 1=validiert)',
   `alumni_status_requested_at` TIMESTAMP NULL DEFAULT NULL COMMENT 'Zeitstempel der Alumni-Status-Anfrage',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -58,16 +58,16 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- Beschreibung: Erweiterte Profile für Alumni-Mitglieder
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `alumni_profiles` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) NOT NULL COMMENT 'Verknüpfung zu users.id',
-  `graduation_year` INT(4) NULL COMMENT 'Abschlussjahr',
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL COMMENT 'Verknüpfung zu users.id',
+  `graduation_year` INT NULL COMMENT 'Abschlussjahr',
   `company` VARCHAR(255) NULL COMMENT 'Aktuelles Unternehmen',
   `position` VARCHAR(255) NULL COMMENT 'Aktuelle Position',
   `linkedin_url` VARCHAR(500) NULL COMMENT 'LinkedIn-Profil URL',
   `bio` TEXT NULL COMMENT 'Kurze Biografie',
   `expertise` TEXT NULL COMMENT 'Fachgebiete und Kompetenzen',
-  `is_willing_to_mentor` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Bereit für Mentoring (0=nein, 1=ja)',
-  `is_alumni_validated` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Profil durch Vorstand validiert (0=ausstehend, 1=validiert)',
+  `is_willing_to_mentor` TINYINT NOT NULL DEFAULT 0 COMMENT 'Bereit für Mentoring (0=nein, 1=ja)',
+  `is_alumni_validated` TINYINT NOT NULL DEFAULT 0 COMMENT 'Profil durch Vorstand validiert (0=ausstehend, 1=validiert)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
   `ip_address` VARCHAR(45) NOT NULL COMMENT 'IPv4 oder IPv6 Adresse',
   `email` VARCHAR(255) DEFAULT NULL COMMENT 'E-Mail-Adresse (falls angegeben)',
   `attempt_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `success` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0 = fehlgeschlagen, 1 = erfolgreich',
+  `success` TINYINT NOT NULL DEFAULT 0 COMMENT '0 = fehlgeschlagen, 1 = erfolgreich',
   `user_agent` VARCHAR(500) DEFAULT NULL COMMENT 'Browser User-Agent',
   PRIMARY KEY (`id`),
   KEY `idx_ip_time` (`ip_address`, `attempt_time`),
@@ -101,11 +101,11 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
 -- Beschreibung: Token-basiertes Einladungs-System
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `invitations` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(255) NOT NULL COMMENT 'E-Mail-Adresse des eingeladenen Benutzers',
   `token` VARCHAR(64) NOT NULL COMMENT 'Kryptographischer Token (SHA256-Hash)',
   `role` VARCHAR(50) NOT NULL DEFAULT 'alumni' COMMENT 'Zuzuweisende Rolle nach Registrierung',
-  `created_by` INT(11) NOT NULL COMMENT 'User-ID des Admin, der die Einladung erstellt hat',
+  `created_by` INT NOT NULL COMMENT 'User-ID des Admin, der die Einladung erstellt hat',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Erstellungszeitpunkt',
   `expires_at` TIMESTAMP NOT NULL COMMENT 'Ablaufzeitpunkt',
   `accepted_at` TIMESTAMP NULL DEFAULT NULL COMMENT 'Annahmezeitpunkt (NULL = ausstehend)',
@@ -164,10 +164,11 @@ INSERT INTO `users` (
   NULL,
   '2026-01-01 10:00:00',
   '2026-01-01 10:00:00'
-) ON DUPLICATE KEY UPDATE
-  `email` = VALUES(`email`),
-  `firstname` = VALUES(`firstname`),
-  `lastname` = VALUES(`lastname`);
+) AS new_data
+ON DUPLICATE KEY UPDATE
+  `email` = new_data.`email`,
+  `firstname` = new_data.`firstname`,
+  `lastname` = new_data.`lastname`;
 
 -- =====================================================================
 -- ENDE DER USER-DATENBANK SETUP
