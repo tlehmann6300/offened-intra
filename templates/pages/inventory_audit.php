@@ -153,10 +153,12 @@ $actionLabels = [
                         <label for="action" class="form-label">Aktion</label>
                         <select name="action" id="action" class="form-select">
                             <option value="">Alle Aktionen</option>
-                            <option value="create" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'create' ? 'selected' : '' ?>>Erstellt</option>
-                            <option value="update" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'update' ? 'selected' : '' ?>>Aktualisiert</option>
-                            <option value="delete" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'delete' ? 'selected' : '' ?>>Gelöscht</option>
-                            <option value="adjust_quantity" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'adjust_quantity' ? 'selected' : '' ?>>Menge angepasst</option>
+                            <?php foreach ($actionLabels as $actionKey => $actionLabel): ?>
+                                <option value="<?= htmlspecialchars($actionKey, ENT_QUOTES, 'UTF-8') ?>" 
+                                        <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === $actionKey ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($actionLabel, ENT_QUOTES, 'UTF-8') ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-4">
