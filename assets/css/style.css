@@ -242,6 +242,11 @@ button:focus,
     border-width: 0.125rem;
 }
 
+/* Empty state icon styling */
+.empty-state-icon {
+    opacity: 0.3;
+}
+
 /* ===================================
    PRINT STYLES
    =================================== */

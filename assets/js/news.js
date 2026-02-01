@@ -455,12 +455,7 @@ function toggleNewsSubscription() {
                 this.checked = previousState;
                 
                 const errorMsg = data.message || 'Fehler beim Aktualisieren der Benachrichtigungseinstellungen';
-                
-                if (typeof showToast === 'function') {
-                    showToast(errorMsg, 'danger');
-                } else {
-                    alert(errorMsg);
-                }
+                showToast(errorMsg, 'danger');
             }
         })
         .catch(error => {
@@ -471,12 +466,7 @@ function toggleNewsSubscription() {
             this.checked = previousState;
             
             const errorMsg = 'Fehler beim Aktualisieren der Benachrichtigungseinstellungen';
-            
-            if (typeof showToast === 'function') {
-                showToast(errorMsg, 'danger');
-            } else {
-                alert(errorMsg);
-            }
+            showToast(errorMsg, 'danger');
         });
     });
 }

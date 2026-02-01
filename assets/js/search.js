@@ -164,7 +164,18 @@ function displaySearchResults(results, counts, total, instance, resultsContainer
     let html = '';
     
     if (total === 0) {
-        html = '<div class="dropdown-item text-muted">Keine Ergebnisse gefunden</div>';
+        // Enhanced empty state with icon and helpful text
+        html = `
+            <div class="dropdown-item text-center py-4" style="white-space: normal;">
+                <div class="mb-3 empty-state-icon">
+                    <i class="fas fa-search fa-3x text-muted"></i>
+                </div>
+                <h6 class="mb-2">Keine Ergebnisse gefunden</h6>
+                <small class="text-muted">
+                    Versuchen Sie andere Suchbegriffe oder überprüfen Sie die Schreibweise.
+                </small>
+            </div>
+        `;
     } else {
         // Display summary header with counts
         html += '<div class="dropdown-header bg-light border-bottom">';
