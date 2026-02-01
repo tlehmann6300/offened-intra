@@ -348,6 +348,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $categories = $inventory->getAllCategories();
             $response = ['success' => true, 'categories' => $categories];
             break;
+            
+        case 'get_history':
+            // Get history for a specific inventory item (super-admins only)
+            if (!$auth->hasFullAccess()) {
+                $response = ['success' => false, 'message' => 'Keine Berechtigung'];
+                break;
+            }
+            
+            $itemId = (int)($_POST['item_id'] ?? 0);
+            
+            if ($itemId <= 0) {
+                $response = ['success' => false, 'message' => 'Ungültige Item-ID'];
+                break;
+            }
+            
+            // Get the last 10 changes for this item from system_logs
+            $logs = $systemLogger->getLogs([
+                'target_type' => 'inventory',
+                'target_id' => $itemId,
+                'limit' => 10
+            ]);
+            
+            // Format the logs for display
+            $formattedLogs = array_map(function($log) {
+                return [
+                    'action' => $log['action'],
+                    'timestamp' => $log['timestamp'],
+                    'user' => trim(($log['firstname'] ?? '') . ' ' . ($log['lastname'] ?? '')) ?: 'Unbekannt'
+                ];
+            }, $logs);
+            
+            $response = [
+                'success' => true,
+                'history' => $formattedLogs
+            ];
+            break;
     }
     
     echo json_encode($response);
@@ -720,6 +756,20 @@ if (!is_array($allCategories)) {
                                     </div>
                                 </div>
                             <?php endif; ?>
+                            
+                            <!-- History Button for Super-Admins -->
+                            <?php if ($auth->hasFullAccess()): ?>
+                                <div class="mt-3">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-secondary w-100" 
+                                            data-action="view-history"
+                                            data-item-id="<?php echo $item['id']; ?>"
+                                            data-item-name="<?php echo htmlspecialchars($item['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                            title="Änderungshistorie anzeigen">
+                                        <i class="fas fa-history me-2"></i>Historie
+                                    </button>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
             <?php endforeach; ?>
@@ -882,6 +932,33 @@ if (!is_array($allCategories)) {
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
                 <button type="button" class="btn btn-primary" data-action="submit-quantity-comment">Bestätigen</button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- History Modal (Super-Admins only) -->
+<?php if ($auth->hasFullAccess()): ?>
+<div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historyModalLabel">Änderungshistorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Letzte 10 Änderungen für: <strong id="historyItemName"></strong></p>
+                <div id="historyContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Lädt...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
             </div>
         </div>
     </div>
@@ -1184,6 +1261,84 @@ if (!is_array($allCategories)) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    <?php if ($auth->hasFullAccess()): ?>
+    // Handle history button clicks
+    document.addEventListener('click', function(e) {
+        const historyBtn = e.target.closest('[data-action="view-history"]');
+        if (historyBtn) {
+            const itemId = historyBtn.getAttribute('data-item-id');
+            const itemName = historyBtn.getAttribute('data-item-name');
+            
+            // Set item name in modal
+            document.getElementById('historyItemName').textContent = itemName;
+            
+            // Show loading spinner
+            const historyContent = document.getElementById('historyContent');
+            historyContent.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Lädt...</span>
+                    </div>
+                </div>
+            `;
+            
+            // Show modal
+            const historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
+            historyModal.show();
+            
+            // Fetch history via AJAX
+            fetch('index.php?page=inventory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=get_history&item_id=${itemId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.history && data.history.length > 0) {
+                    // Format and display history
+                    let historyHtml = '<div class="list-group">';
+                    data.history.forEach(log => {
+                        const actionText = {
+                            'create': 'Erstellt',
+                            'update': 'Aktualisiert',
+                            'delete': 'Gelöscht',
+                            'adjust_quantity': 'Bestand geändert'
+                        }[log.action] || log.action;
+                        
+                        const timestamp = new Date(log.timestamp).toLocaleString('de-DE', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        historyHtml += `
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">${actionText}</h6>
+                                    <small class="text-muted">${timestamp}</small>
+                                </div>
+                                <small>von ${log.user}</small>
+                            </div>
+                        `;
+                    });
+                    historyHtml += '</div>';
+                    historyContent.innerHTML = historyHtml;
+                } else {
+                    historyContent.innerHTML = '<p class="text-muted text-center">Keine Änderungen gefunden.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching history:', error);
+                historyContent.innerHTML = '<p class="text-danger text-center">Fehler beim Laden der Historie.</p>';
+            });
+        }
+    });
+    <?php endif; ?>
+    
     const locationFilter = document.getElementById('locationFilter');
     const locationFilterMobile = document.getElementById('locationFilterMobile');
     

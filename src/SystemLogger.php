@@ -80,6 +80,12 @@ class SystemLogger {
                 $params[] = (int)$filters['user_id'];
             }
             
+            // Add target_id filter
+            if (!empty($filters['target_id'])) {
+                $sql .= " AND sl.target_id = ?";
+                $params[] = (int)$filters['target_id'];
+            }
+            
             // Add date range filter
             if (!empty($filters['date_from'])) {
                 $sql .= " AND sl.timestamp >= ?";
@@ -139,6 +145,12 @@ class SystemLogger {
             if (!empty($filters['user_id'])) {
                 $sql .= " AND sl.user_id = ?";
                 $params[] = (int)$filters['user_id'];
+            }
+            
+            // Add target_id filter
+            if (!empty($filters['target_id'])) {
+                $sql .= " AND sl.target_id = ?";
+                $params[] = (int)$filters['target_id'];
             }
             
             // Add date range filter
