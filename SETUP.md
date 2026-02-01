@@ -2,6 +2,16 @@
 
 This guide will help you set up the IBC-Intra application from a fresh clone.
 
+## ⚠️ CRITICAL: Most Common Deployment Issue
+
+**HTTP 500 Error after deployment?** 
+→ You forgot to run `composer install`! The `vendor/` directory is not in git and must be created on the server.
+
+**Solution:**
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
 ## Prerequisites
 
 - PHP >= 7.4 (with PDO extension)
@@ -12,13 +22,18 @@ This guide will help you set up the IBC-Intra application from a fresh clone.
 
 ## Quick Setup
 
-After cloning the repository, follow these steps:
+**IMPORTANT:** After cloning the repository, follow these steps in order:
 
-### 1. Install Composer Dependencies
+### 1. Install Composer Dependencies (REQUIRED)
 
 ```bash
 composer install --no-dev --optimize-autoloader
 ```
+
+**Why this is required:**
+- The `vendor/` directory contains critical dependencies (PHPMailer, Dotenv, Google Authenticator)
+- This directory is **not included in git** (listed in `.gitignore`)
+- Without these dependencies, you will get **HTTP 500 errors**
 
 This will install required packages:
 - phpmailer/phpmailer (Email functionality)

@@ -115,7 +115,40 @@ fi
 
 echo ""
 echo "============================================================"
-echo "2. Checking Built Assets"
+echo "2. Checking Dependencies"
+echo "============================================================"
+echo ""
+
+# Check for Composer dependencies
+if [ -d "vendor" ] && [ -f "vendor/autoload.php" ]; then
+    print_success "Composer vendor directory exists"
+    
+    # Check critical dependencies
+    if [ -f "vendor/phpmailer/phpmailer/src/PHPMailer.php" ]; then
+        print_success "PHPMailer installed"
+    else
+        print_error "PHPMailer not found - Run 'composer install'"
+    fi
+    
+    if [ -f "vendor/vlucas/phpdotenv/src/Dotenv.php" ]; then
+        print_success "Dotenv installed"
+    else
+        print_error "Dotenv not found - Run 'composer install'"
+    fi
+    
+    if [ -f "vendor/sonata-project/google-authenticator/src/GoogleAuthenticator.php" ]; then
+        print_success "Google Authenticator installed"
+    else
+        print_error "Google Authenticator not found - Run 'composer install'"
+    fi
+else
+    print_error "Composer dependencies not installed"
+    print_error "Run: composer install --no-dev --optimize-autoloader"
+fi
+
+echo ""
+echo "============================================================"
+echo "3. Checking Built Assets"
 echo "============================================================"
 echo ""
 
@@ -151,7 +184,7 @@ fi
 
 echo ""
 echo "============================================================"
-echo "3. Checking File Structure"
+echo "4. Checking File Structure"
 echo "============================================================"
 echo ""
 
@@ -184,7 +217,7 @@ done
 
 echo ""
 echo "============================================================"
-echo "4. Checking Permissions"
+echo "5. Checking Permissions"
 echo "============================================================"
 echo ""
 

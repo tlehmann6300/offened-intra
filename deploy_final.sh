@@ -48,6 +48,14 @@ print_error() {
 echo "Checking prerequisites..."
 echo ""
 
+# Check for Composer
+if ! command -v composer &> /dev/null; then
+    print_error "Composer is not installed"
+    echo "Please install Composer from https://getcomposer.org/"
+    exit 1
+fi
+print_success "Composer: $(composer --version 2>&1 | head -1)"
+
 # Check for Node.js
 if ! command -v node &> /dev/null; then
     print_error "Node.js is not installed"
@@ -69,6 +77,43 @@ if ! command -v mysql &> /dev/null; then
     exit 1
 fi
 print_success "MySQL client available"
+
+echo ""
+echo "============================================================"
+echo "STEP 0: Install Composer Dependencies"
+echo "============================================================"
+echo ""
+
+# Check if vendor directory exists
+if [ ! -d "vendor" ] || [ ! -f "vendor/autoload.php" ]; then
+    print_warning "Vendor directory not found - Installing Composer dependencies..."
+    composer install --no-dev --optimize-autoloader
+    
+    if [ $? -eq 0 ]; then
+        print_success "Composer dependencies installed"
+    else
+        print_error "Composer install failed"
+        exit 1
+    fi
+else
+    print_success "Composer dependencies already installed"
+    echo "   To update dependencies, run: composer update"
+fi
+
+# Verify critical dependencies
+if [ -f "vendor/phpmailer/phpmailer/src/PHPMailer.php" ]; then
+    print_success "PHPMailer dependency verified"
+else
+    print_error "PHPMailer not found - Dependencies may be incomplete"
+    exit 1
+fi
+
+if [ -f "vendor/vlucas/phpdotenv/src/Dotenv.php" ]; then
+    print_success "Dotenv dependency verified"
+else
+    print_error "Dotenv not found - Dependencies may be incomplete"
+    exit 1
+fi
 
 echo ""
 echo "============================================================"
