@@ -634,7 +634,10 @@ class Inventory {
             if ($userId !== null && isset($userData[$userId])) {
                 $item['responsible_firstname'] = $userData[$userId]['firstname'];
                 $item['responsible_lastname'] = $userData[$userId]['lastname'];
-                $item['responsible_fullname'] = $userData[$userId]['firstname'] . ' ' . $userData[$userId]['lastname'];
+                // Build fullname with proper handling of empty names
+                $firstname = trim($userData[$userId]['firstname'] ?? '');
+                $lastname = trim($userData[$userId]['lastname'] ?? '');
+                $item['responsible_fullname'] = trim($firstname . ' ' . $lastname);
             } else {
                 $item['responsible_firstname'] = null;
                 $item['responsible_lastname'] = null;
