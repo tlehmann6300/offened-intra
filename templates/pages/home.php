@@ -26,17 +26,19 @@ $latestNews = $news->getLatest(3);
 $nextEvent = $event->getNextEvent();
 $latestProjects = $project->getLatest(3);
 
-// Get inventory statistics for teaser
+// Get inventory statistics for teaser - lightweight queries only
 $inventoryStats = [
     'total_items' => 0,
     'low_stock' => 0
 ];
 try {
-    $allInventoryItems = $inventory->getAll();
-    $inventoryStats['total_items'] = count($allInventoryItems);
-    $inventoryStats['low_stock'] = count(array_filter($allInventoryItems, function($item) {
-        return isset($item['quantity']) && $item['quantity'] < LOW_STOCK_THRESHOLD;
-    }));
+    // Use direct COUNT queries instead of loading all items
+    $stmt = $pdo->query("SELECT COUNT(*) as total FROM inventory WHERE status = 'active'");
+    $inventoryStats['total_items'] = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM inventory WHERE status = 'active' AND quantity < ?");
+    $stmt->execute([LOW_STOCK_THRESHOLD]);
+    $inventoryStats['low_stock'] = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 } catch (Exception $e) {
     error_log("Error fetching inventory stats: " . $e->getMessage());
 }
