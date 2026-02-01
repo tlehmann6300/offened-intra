@@ -163,7 +163,7 @@ $firstname = $auth->getFirstname() ?? 'Benutzer';
         <!-- Latest Projects Cards -->
         <?php if (!empty($latestProjects)): ?>
             <?php 
-            // Display up to 2 projects to fill the 3-column row
+            // Display up to 2 projects to complete the 3-column second row (event + 2 projects)
             $displayProjects = array_slice($latestProjects, 0, 2);
             foreach ($displayProjects as $projectItem): 
             ?>
