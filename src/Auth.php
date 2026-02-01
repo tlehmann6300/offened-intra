@@ -796,11 +796,12 @@ class Auth {
      */
     private function getPermissionMatrix(): array {
         return [
-            'vorstand' => ['*'], // Full access
-            'admin' => ['*'], // Full access
-            '1v' => ['*'], // Full access - First board member
-            '2v' => ['*'], // Full access - Second board member
-            '3v' => ['*'], // Full access - Third board member
+            'admin' => ['*'], // Full system access - Super-Admin
+            '1v' => ['*'], // Full access - First board member - Super-Admin
+            '2v' => ['*'], // Full access - Second board member - Super-Admin
+            '3v' => ['*'], // Full access - Third board member - Super-Admin
+            'alumni-vorstand' => ['*'], // Full access - Alumni board member - Super-Admin
+            'vorstand' => ['*'], // Full access - Board member
             'ressortleiter' => ['edit_news', 'edit_projects', 'edit_events', 'apply_projects', 'edit_own_profile', 'edit_inventory'],
             'alumni' => ['edit_own_profile', 'edit_inventory'],
             'mitglied' => ['edit_own_profile', 'apply_projects'],
@@ -879,7 +880,7 @@ class Auth {
         }
         
         // Admin area access: full access roles or ressortleiter
-        $adminRoles = ['admin', 'vorstand', '1v', '2v', '3v', 'ressortleiter'];
+        $adminRoles = ['admin', 'vorstand', '1v', '2v', '3v', 'alumni-vorstand', 'ressortleiter'];
         return in_array($role, $adminRoles, true);
     }
     
@@ -888,7 +889,11 @@ class Auth {
      * This constant makes it easier to maintain and modify role hierarchies
      * 
      * New hierarchy as per requirement:
-     * Admin/1V-3V > Ressortleiter > Mitglied > Alumni
+     * Admin/1V-3V/Alumni-Vorstand > Ressortleiter > Mitglied > Alumni
+     * 
+     * Note: alumni-vorstand and 1v share the same hierarchy level (7) as they
+     * both have equivalent super-admin privileges with wildcard permissions.
+     * Hierarchy is used for >= comparisons, so equal levels work correctly.
      * 
      * @var array<string, int>
      */
@@ -897,11 +902,12 @@ class Auth {
         'alumni' => 1,        // Alumni - lowest active role, requires validation
         'mitglied' => 2,      // Regular member
         'ressortleiter' => 3, // Department leader
-        '3v' => 4,            // Third board member (3. Vorstand)
-        '2v' => 5,            // Second board member (2. Vorstand)
-        '1v' => 6,            // First board member (1. Vorstand)
-        'vorstand' => 7,      // Board member (general vorstand)
-        'admin' => 8,         // Full system access
+        '3v' => 5,            // Third board member (3. Vorstand) - Super-Admin
+        '2v' => 6,            // Second board member (2. Vorstand) - Super-Admin
+        '1v' => 7,            // First board member (1. Vorstand) - Super-Admin
+        'alumni-vorstand' => 7, // Alumni board member - Super-Admin (same level as 1V)
+        'vorstand' => 8,      // Board member (general vorstand)
+        'admin' => 9,         // Full system access - Super-Admin
     ];
     
     /**
@@ -988,7 +994,7 @@ class Auth {
     public function updateUserRole(int $userId, string $role): bool {
         try {
             // Validate role
-            $validRoles = ['none', 'alumni', 'mitglied', 'ressortleiter', '1v', '2v', '3v', 'vorstand', 'admin'];
+            $validRoles = ['none', 'alumni', 'mitglied', 'ressortleiter', '1v', '2v', '3v', 'alumni-vorstand', 'vorstand', 'admin'];
             if (!in_array($role, $validRoles, true)) {
                 $this->log("Invalid role attempted: {$role} for user ID: {$userId}");
                 return false;
@@ -1081,7 +1087,7 @@ class Auth {
             }
             
             $validatorRole = $validator['role'];
-            $allowedRoles = ['admin', 'vorstand', '1v', '2v', '3v'];
+            $allowedRoles = ['admin', 'vorstand', '1v', '2v', '3v', 'alumni-vorstand'];
             
             if (!in_array($validatorRole, $allowedRoles, true)) {
                 $this->log("Permission denied: User ID {$validatorUserId} (role: {$validatorRole}) cannot validate alumni");

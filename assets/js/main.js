@@ -3454,6 +3454,13 @@ function initEditModeToggle() {
             // Restore button state for all toggle buttons
             toggleButtons.forEach(btn => {
                 toggleButtonState(btn, false);
+                // Re-apply the correct active state after button restoration
+                // This ensures the active class is preserved even after innerHTML is restored
+                if (isActive) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
             });
         });
     }
