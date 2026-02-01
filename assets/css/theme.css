@@ -86,6 +86,7 @@
     --card-border-glass: rgba(255, 255, 255, 0.4); /* White glass border */
     --card-border: rgba(0, 0, 0, 0.03);
     --card-border-hover: rgba(0, 0, 0, 0.06);
+    --card-border-medium: rgba(0, 0, 0, 0.08);
     
     /* Graduated Shadow System - Enhanced Depth */
     --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04); /* Subtle elevation */
@@ -1052,7 +1053,7 @@ a:hover {
 
 .card {
     background: var(--card-bg-primary);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--card-border-hover);
     border-radius: 1.5rem;
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
@@ -1167,7 +1168,7 @@ a:hover {
 
 .form-control,
 .form-select {
-    border: 2px solid rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--card-border-medium);
     border-radius: 0.875rem;
     padding: 0.75rem 1.125rem;
     font-size: 1rem;
@@ -2696,8 +2697,12 @@ body.edit-mode-active .navbar.sticky-top {
 }
 
 @keyframes heroRotate {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% { 
+        transform: rotate(0deg); 
+    }
+    100% { 
+        transform: rotate(360deg); 
+    }
 }
 
 .hero-section-dashboard::after {
