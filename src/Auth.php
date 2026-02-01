@@ -885,6 +885,49 @@ class Auth {
     }
     
     /**
+     * Check if the current user is a board member (Vorstand) - admin, 1V, 2V, or 3V
+     * This is specifically for UI elements like FAB that should only be visible to board members
+     * 
+     * @return bool True if user is admin, 1v, 2v, or 3v, false otherwise
+     */
+    public function isBoardMember(): bool {
+        $role = $this->getUserRole();
+        
+        // If no role or role is 'none', deny access
+        if (!$role || $role === 'none') {
+            return false;
+        }
+        
+        // Board member roles: admin, 1v, 2v, 3v (excluding vorstand, alumni-vorstand)
+        $boardRoles = ['admin', '1v', '2v', '3v'];
+        return in_array($role, $boardRoles, true);
+    }
+    
+    /**
+     * Check if the current user can edit inventory items
+     * This excludes mitglied (member) and alumni roles from edit access
+     * 
+     * @return bool True if user can edit inventory (not mitglied or alumni), false otherwise
+     */
+    public function canEditInventory(): bool {
+        $role = $this->getUserRole();
+        
+        // If no role or role is 'none', deny access
+        if (!$role || $role === 'none') {
+            return false;
+        }
+        
+        // Deny edit access for mitglied and alumni
+        $restrictedRoles = ['mitglied', 'alumni'];
+        if (in_array($role, $restrictedRoles, true)) {
+            return false;
+        }
+        
+        // Use standard permission check for other roles
+        return $this->can('edit_inventory');
+    }
+    
+    /**
      * Role hierarchy definition (higher number = more privileges)
      * This constant makes it easier to maintain and modify role hierarchies
      * 

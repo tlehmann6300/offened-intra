@@ -411,9 +411,9 @@ $displayName = getUserDisplayName();
     </nav>
     <?php endif; ?>
     
-    <!-- Edit Mode FAB (Floating Action Button) - Only for super-admins -->
+    <!-- Edit Mode FAB (Floating Action Button) - Only for board members (admin, 1V, 2V, 3V) -->
     <?php if (isset($auth) && $auth->isLoggedIn()): ?>
-        <?php if ($auth->hasFullAccess()): ?>
+        <?php if ($auth->isBoardMember()): ?>
             <?php 
             $fabActiveClass = $editModeActive ? ' active' : '';
             $fabDataActive = $editModeActive ? 'true' : 'false';
