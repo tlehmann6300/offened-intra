@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'create':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'update':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'delete':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'adjust_quantity':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -214,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'add_location':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -247,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'delete_location':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -270,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'add_category':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -307,7 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'delete_category':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -330,7 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'get_all_locations':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -340,7 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             break;
             
         case 'get_all_categories':
-            if (!$auth->can('edit_inventory')) {
+            if (!$auth->canEditInventory()) {
                 $response = ['success' => false, 'message' => 'Keine Berechtigung'];
                 break;
             }
@@ -361,8 +361,8 @@ $search = $_GET['search'] ?? null;
 $items = $inventory->getAll($search);
 $stats = $inventory->getStatistics();
 
-// Check if user can edit inventory
-$canEdit = $auth->can('edit_inventory');
+// Check if user can edit inventory (excludes mitglied and alumni)
+$canEdit = $auth->canEditInventory();
 
 // Get CSRF token for AJAX requests
 $csrfToken = $auth->getCsrfToken();
