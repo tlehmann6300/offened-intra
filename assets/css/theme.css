@@ -321,6 +321,7 @@ a:hover {
    NAVBAR - GLASSMORPHISM & STICKY-TOP
    ======================================== */
 
+/* Primary Navigation Bar */
 .navbar {
     background: rgba(26, 31, 58, 0.85) !important;
     backdrop-filter: blur(12px);
@@ -328,6 +329,11 @@ a:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     padding: 0.75rem 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1040; /* Above content (1), below modals (1055) */
+}
+
+.navbar.sticky-top {
+    z-index: 1040; /* Ensure sticky navbar maintains proper z-index */
 }
 
 /* Centered logo on desktop */
@@ -391,6 +397,21 @@ a:hover {
     color: var(--ibc-white) !important;
     font-weight: 600;
     background: rgba(255, 255, 255, 0.15);
+    position: relative;
+}
+
+/* Active state indicator - small dot under icon */
+.navbar-nav .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background-color: var(--ibc-accent-orange);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
 }
 
 .navbar-toggler {
@@ -787,6 +808,9 @@ a:hover {
 .minimal-footer {
     flex-shrink: 0;
     margin-top: auto;
+    position: relative;
+    z-index: 10; /* Above regular content, below navbar and modals */
+    background-color: var(--ibc-bg-light);
 }
 
 .minimal-footer a:hover {
@@ -832,10 +856,25 @@ a:hover {
     border-radius: 8px;
     padding: 0.25rem 0.5rem;
     margin: -0.25rem -0.5rem;
+    position: relative;
 }
 
 .mobile-bottom-nav a.active i {
     transform: scale(1.1);
+}
+
+/* Active state indicator for mobile nav - small dot above icon */
+.mobile-bottom-nav a.active::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background-color: var(--ibc-accent-orange);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
 }
 
 /* ========================================
@@ -1359,6 +1398,10 @@ a:hover {
 
 /* ========================================
    MODALS
+   Bootstrap default z-index ensures proper layering:
+   - .modal-backdrop: 1050
+   - .modal: 1055
+   This keeps modals above navbar (1040) and content
    ======================================== */
 
 .modal-content {
@@ -2151,6 +2194,70 @@ body.edit-mode-active .navbar.sticky-top {
     box-shadow: var(--shadow-hover);
     backdrop-filter: blur(20px); /* Increased blur on hover */
     -webkit-backdrop-filter: blur(20px);
+}
+
+/* ========================================
+   BENTO-BOX DASHBOARD LAYOUT
+   ======================================== */
+
+/* Bento Card - Interactive tile with enhanced visual effects */
+.bento-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.bento-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.bento-card:hover::before {
+    opacity: 1;
+}
+
+.bento-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+/* Bento Tile Containers */
+.bento-tile-large,
+.bento-tile-small {
+    width: 100%;
+}
+
+/* Remove pointer cursor for project cards that are wrapped in links */
+.project-card {
+    cursor: default;
+}
+
+a .project-card {
+    cursor: pointer;
+}
+
+/* Hero section for dashboard */
+.hero-section-dashboard {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border: 1px solid var(--card-border-glass);
+}
+
+/* Text gradient for premium feel */
+.text-gradient-premium {
+    background: linear-gradient(135deg, var(--ibc-blue-medium) 0%, var(--ibc-accent-purple) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
 }
 
 /* Responsive Padding Utilities - Override inline classes for mobile optimization */
