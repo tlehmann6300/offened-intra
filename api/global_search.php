@@ -16,7 +16,8 @@ declare(strict_types=1);
  * 
  * Performance optimizations:
  * - Separate queries to each database to handle multi-database architecture
- * - Supports limit/offset pagination (limit: 1-100, default 50; offset: >= 0, default 0)
+ * - Top 5 results per category for optimal performance
+ * - Each result includes explicit Type label ([News], [Inventar], etc.)
  * - Database indexes recommended: inventory(name), users(firstname, lastname), news(title)
  */
 
@@ -66,29 +67,12 @@ try {
     // Get and validate search query
     $query = trim($_GET['q'] ?? '');
     
-    // Get and validate pagination parameters
-    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
-    $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-    
-    // Validate pagination parameters
-    if ($limit < 1 || $limit > 100) {
-        $limit = 50; // Default to 50
-    }
-    
-    if ($offset < 0) {
-        $offset = 0; // Default to 0
-    }
-    
     // Validate query length
     if (empty($query)) {
         echo json_encode([
             'success' => true,
             'message' => 'Leere Suchanfrage',
-            'results' => [],
-            'pagination' => [
-                'limit' => $limit,
-                'offset' => $offset
-            ]
+            'results' => []
         ]);
         exit;
     }
@@ -97,11 +81,7 @@ try {
         echo json_encode([
             'success' => true,
             'message' => 'Suchanfrage zu kurz (mindestens 2 Zeichen)',
-            'results' => [],
-            'pagination' => [
-                'limit' => $limit,
-                'offset' => $offset
-            ]
+            'results' => []
         ]);
         exit;
     }
@@ -111,11 +91,7 @@ try {
         echo json_encode([
             'success' => false,
             'message' => 'Suchanfrage zu lang (maximal 100 Zeichen)',
-            'results' => [],
-            'pagination' => [
-                'limit' => $limit,
-                'offset' => $offset
-            ]
+            'results' => []
         ]);
         exit;
     }
@@ -125,6 +101,7 @@ try {
     
     // ===========================================================================
     // STEP 1: Query User Database (users, alumni_profiles)
+    // Limit to Top 5 results per category for performance
     // ===========================================================================
     $sqlUserDb = "
         -- Search Users (with alumni profiles)
@@ -151,6 +128,7 @@ try {
             OR ap.bio LIKE :search5
         )
         ORDER BY u.created_at DESC
+        LIMIT 5
     ";
     
     $stmtUser = $userPdo->prepare($sqlUserDb);
@@ -162,9 +140,11 @@ try {
     
     // ===========================================================================
     // STEP 2: Query Content Database (inventory, events, projects, news)
+    // Separate queries with Top 5 limit per category for performance
     // ===========================================================================
-    $sqlContentDb = "
-        -- Search Inventory
+    
+    // Query 2.1: Search Inventory (Top 5)
+    $sqlInventory = "
         SELECT 
             'inventory' as type,
             i.id,
@@ -188,10 +168,19 @@ try {
             OR il.name LIKE :search4
             OR i.tags LIKE :search5
         )
-        
-        UNION ALL
-        
-        -- Search News
+        ORDER BY i.created_at DESC
+        LIMIT 5
+    ";
+    
+    $stmtInventory = $contentPdo->prepare($sqlInventory);
+    for ($i = 1; $i <= 5; $i++) {
+        $stmtInventory->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
+    }
+    $stmtInventory->execute();
+    $inventoryResults = $stmtInventory->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Query 2.2: Search News (Top 5)
+    $sqlNews = "
         SELECT 
             'news' as type,
             id,
@@ -201,12 +190,21 @@ try {
             content as extra_info,
             created_at as date
         FROM news
-        WHERE title LIKE :search6
-        OR content LIKE :search7
-        
-        UNION ALL
-        
-        -- Search Events
+        WHERE title LIKE :search1
+        OR content LIKE :search2
+        ORDER BY created_at DESC
+        LIMIT 5
+    ";
+    
+    $stmtNews = $contentPdo->prepare($sqlNews);
+    for ($i = 1; $i <= 2; $i++) {
+        $stmtNews->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
+    }
+    $stmtNews->execute();
+    $newsResults = $stmtNews->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Query 2.3: Search Events (Top 5)
+    $sqlEvents = "
         SELECT 
             'event' as type,
             id,
@@ -216,13 +214,22 @@ try {
             description as extra_info,
             event_date as date
         FROM events
-        WHERE title LIKE :search8
-        OR description LIKE :search9
-        OR location LIKE :search10
-        
-        UNION ALL
-        
-        -- Search Projects
+        WHERE title LIKE :search1
+        OR description LIKE :search2
+        OR location LIKE :search3
+        ORDER BY event_date DESC
+        LIMIT 5
+    ";
+    
+    $stmtEvents = $contentPdo->prepare($sqlEvents);
+    for ($i = 1; $i <= 3; $i++) {
+        $stmtEvents->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
+    }
+    $stmtEvents->execute();
+    $eventsResults = $stmtEvents->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Query 2.4: Search Projects (Top 5)
+    $sqlProjects = "
         SELECT 
             'project' as type,
             id,
@@ -232,19 +239,22 @@ try {
             description as extra_info,
             created_at as date
         FROM projects
-        WHERE title LIKE :search11
-        OR description LIKE :search12
-        OR client LIKE :search13
-        
-        ORDER BY date DESC
+        WHERE title LIKE :search1
+        OR description LIKE :search2
+        OR client LIKE :search3
+        ORDER BY created_at DESC
+        LIMIT 5
     ";
     
-    $stmtContent = $contentPdo->prepare($sqlContentDb);
-    for ($i = 1; $i <= 13; $i++) {
-        $stmtContent->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
+    $stmtProjects = $contentPdo->prepare($sqlProjects);
+    for ($i = 1; $i <= 3; $i++) {
+        $stmtProjects->bindValue(":search{$i}", $searchTerm, PDO::PARAM_STR);
     }
-    $stmtContent->execute();
-    $contentResults = $stmtContent->fetchAll(PDO::FETCH_ASSOC);
+    $stmtProjects->execute();
+    $projectsResults = $stmtProjects->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Merge all content results
+    $contentResults = array_merge($inventoryResults, $newsResults, $eventsResults, $projectsResults);
     
     // ===========================================================================
     // STEP 3: Merge results from both databases
@@ -312,10 +322,6 @@ try {
         return strtotime($b['date']) - strtotime($a['date']);
     });
     
-    // Apply pagination after merging and sorting
-    $totalBeforePagination = count($allResults);
-    $allResults = array_slice($allResults, $offset, $limit);
-    
     // Group results by type
     $groupedResults = [
         'inventory' => [],
@@ -348,7 +354,27 @@ try {
                 break;
         }
         
-        // Add to grouped results
+        // Get type label for display
+        $typeLabel = '';
+        switch ($type) {
+            case 'inventory':
+                $typeLabel = '[Inventar]';
+                break;
+            case 'user':
+                $typeLabel = '[Person]';
+                break;
+            case 'news':
+                $typeLabel = '[News]';
+                break;
+            case 'event':
+                $typeLabel = '[Event]';
+                break;
+            case 'project':
+                $typeLabel = '[Projekt]';
+                break;
+        }
+        
+        // Add to grouped results with explicit type label
         $groupedResults[$type][] = [
             'id' => $row['id'],
             'title' => $row['title'],
@@ -356,7 +382,8 @@ try {
             'quantity' => $row['quantity'],
             'date' => $row['date'],
             'url' => $url,
-            'type' => $type
+            'type' => $type,
+            'typeLabel' => $typeLabel
         ];
     }
     
@@ -378,12 +405,7 @@ try {
         'query' => $query,
         'total' => $totalCount,
         'counts' => $counts,
-        'results' => $groupedResults,
-        'pagination' => [
-            'limit' => $limit,
-            'offset' => $offset,
-            'returned' => $totalCount
-        ]
+        'results' => $groupedResults
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     
 } catch (PDOException $e) {
@@ -393,11 +415,7 @@ try {
     echo json_encode([
         'success' => false,
         'message' => 'Datenbankfehler bei der Suche',
-        'results' => [],
-        'pagination' => [
-            'limit' => $limit ?? 50,
-            'offset' => $offset ?? 0
-        ]
+        'results' => []
     ]);
 } catch (Exception $e) {
     // Log general error
@@ -406,10 +424,6 @@ try {
     echo json_encode([
         'success' => false,
         'message' => 'Fehler bei der Suche',
-        'results' => [],
-        'pagination' => [
-            'limit' => $limit ?? 50,
-            'offset' => $offset ?? 0
-        ]
+        'results' => []
     ]);
 }
