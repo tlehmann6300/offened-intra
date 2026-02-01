@@ -206,8 +206,8 @@ function getEmptyStateTemplate(hasFilters) {
         <div class="col-12">
             <div class="card glass-card text-center py-5 px-4" style="max-width: 600px; margin: 0 auto;">
                 <div class="card-body">
-                    <div class="empty-state-icon mb-4">
-                        <i class="fas fa-box-open fa-5x text-primary" style="opacity: 0.3;"></i>
+                    <div class="mb-4 empty-state-icon">
+                        <i class="fas fa-box-open fa-5x text-primary"></i>
                     </div>
                     <h3 class="mb-3">Keine Gegenstände gefunden</h3>
                     ${hasFilters ? `
