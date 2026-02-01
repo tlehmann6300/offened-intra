@@ -34,11 +34,13 @@ $inventoryStats = [
 try {
     // Use direct COUNT queries instead of loading all items
     $stmt = $pdo->query("SELECT COUNT(*) as total FROM inventory WHERE status = 'active'");
-    $inventoryStats['total_items'] = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $inventoryStats['total_items'] = $result ? (int)$result['total'] : 0;
     
     $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM inventory WHERE status = 'active' AND quantity < ?");
     $stmt->execute([LOW_STOCK_THRESHOLD]);
-    $inventoryStats['low_stock'] = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $inventoryStats['low_stock'] = $result ? (int)$result['total'] : 0;
 } catch (Exception $e) {
     error_log("Error fetching inventory stats: " . $e->getMessage());
 }

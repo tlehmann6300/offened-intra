@@ -36,11 +36,19 @@ if (!empty($_GET['action'])) {
 }
 
 if (!empty($_GET['date_from'])) {
-    $filters['date_from'] = $_GET['date_from'];
+    // Validate date format to prevent SQL injection
+    $dateFrom = $_GET['date_from'];
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
+        $filters['date_from'] = $dateFrom;
+    }
 }
 
 if (!empty($_GET['date_to'])) {
-    $filters['date_to'] = $_GET['date_to'] . ' 23:59:59';
+    // Validate date format to prevent SQL injection
+    $dateTo = $_GET['date_to'];
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+        $filters['date_to'] = $dateTo . ' 23:59:59';
+    }
 }
 
 // Get audit logs
@@ -139,10 +147,10 @@ $actionLabels = [
                         <label for="action" class="form-label">Aktion</label>
                         <select name="action" id="action" class="form-select">
                             <option value="">Alle Aktionen</option>
-                            <option value="create" <?= ($_GET['action'] ?? '') === 'create' ? 'selected' : '' ?>>Erstellt</option>
-                            <option value="update" <?= ($_GET['action'] ?? '') === 'update' ? 'selected' : '' ?>>Aktualisiert</option>
-                            <option value="delete" <?= ($_GET['action'] ?? '') === 'delete' ? 'selected' : '' ?>>Gelöscht</option>
-                            <option value="adjust_quantity" <?= ($_GET['action'] ?? '') === 'adjust_quantity' ? 'selected' : '' ?>>Menge angepasst</option>
+                            <option value="create" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'create' ? 'selected' : '' ?>>Erstellt</option>
+                            <option value="update" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'update' ? 'selected' : '' ?>>Aktualisiert</option>
+                            <option value="delete" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'delete' ? 'selected' : '' ?>>Gelöscht</option>
+                            <option value="adjust_quantity" <?= htmlspecialchars($_GET['action'] ?? '', ENT_QUOTES, 'UTF-8') === 'adjust_quantity' ? 'selected' : '' ?>>Menge angepasst</option>
                         </select>
                     </div>
                     <div class="col-md-4">
