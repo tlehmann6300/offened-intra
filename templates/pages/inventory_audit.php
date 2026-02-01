@@ -36,18 +36,24 @@ if (!empty($_GET['action'])) {
 }
 
 if (!empty($_GET['date_from'])) {
-    // Validate date format to prevent SQL injection
+    // Validate date format and verify it's a valid date
     $dateFrom = $_GET['date_from'];
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
-        $filters['date_from'] = $dateFrom;
+        $dateObj = DateTime::createFromFormat('Y-m-d', $dateFrom);
+        if ($dateObj && $dateObj->format('Y-m-d') === $dateFrom) {
+            $filters['date_from'] = $dateFrom;
+        }
     }
 }
 
 if (!empty($_GET['date_to'])) {
-    // Validate date format to prevent SQL injection
+    // Validate date format and verify it's a valid date
     $dateTo = $_GET['date_to'];
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
-        $filters['date_to'] = $dateTo . ' 23:59:59';
+        $dateObj = DateTime::createFromFormat('Y-m-d', $dateTo);
+        if ($dateObj && $dateObj->format('Y-m-d') === $dateTo) {
+            $filters['date_to'] = $dateTo . ' 23:59:59';
+        }
     }
 }
 
@@ -237,7 +243,7 @@ $actionLabels = [
                                         ?>
                                         <span class="badge bg-<?= $actionClass ?>">
                                             <i class="fas <?= $actionIcon ?> me-1"></i>
-                                            <?= htmlspecialchars($actionLabels[$log['action']] ?? $log['action']) ?>
+                                            <?= htmlspecialchars($actionLabels[$log['action']] ?? 'Unbekannt') ?>
                                         </span>
                                     </td>
                                     <td>
