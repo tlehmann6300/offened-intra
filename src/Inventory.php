@@ -512,6 +512,138 @@ class Inventory {
     }
     
     /**
+     * Get inventory items with responsible user information merged
+     * This method handles the multi-database setup by:
+     * 1. Querying inventory items from Content-DB
+     * 2. Collecting all responsible_user_ids
+     * 3. Querying user names from User-DB
+     * 4. Merging data in PHP
+     * 
+     * @param string|null $search Optional search term
+     * @param array $filters Optional filters (category, location, status)
+     * @return array List of inventory items with responsible user names
+     */
+    public function getItems(?string $search = null, array $filters = []): array {
+        try {
+            // Step 1: Query inventory items from Content-DB
+            $sql = "SELECT * FROM inventory WHERE 1=1";
+            $params = [];
+            
+            // Add search filter
+            if ($search) {
+                $sql .= " AND (name LIKE ? OR location LIKE ? OR tags LIKE ?)";
+                $searchTerm = '%' . $search . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            // Add category filter
+            if (!empty($filters['category']) && $filters['category'] !== 'all') {
+                $sql .= " AND category = ?";
+                $params[] = $filters['category'];
+            }
+            
+            // Add location filter
+            if (!empty($filters['location']) && $filters['location'] !== 'all') {
+                $sql .= " AND location = ?";
+                $params[] = $filters['location'];
+            }
+            
+            // Add status filter
+            if (!empty($filters['status']) && $filters['status'] !== 'all') {
+                $sql .= " AND status = ?";
+                $params[] = $filters['status'];
+            }
+            
+            $sql .= " ORDER BY name ASC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Step 2: Collect all responsible_user_ids
+            $responsibleUserIds = [];
+            foreach ($items as $item) {
+                if (!empty($item['responsible_user_id'])) {
+                    $responsibleUserIds[] = $item['responsible_user_id'];
+                }
+            }
+            
+            // Step 3: Fetch user data from User-DB
+            $userData = [];
+            if (!empty($responsibleUserIds)) {
+                $userData = $this->fetchResponsibleUserData(array_unique($responsibleUserIds));
+            }
+            
+            // Step 4: Merge user data into inventory items
+            $this->mergeResponsibleUserData($items, $userData);
+            
+            return $items;
+        } catch (PDOException $e) {
+            error_log("Error fetching inventory items with responsible users: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Fetch responsible user data from User-DB for given user IDs
+     * 
+     * @param array $userIds Array of user IDs
+     * @return array Associative array with user_id as key and user data as value
+     */
+    private function fetchResponsibleUserData(array $userIds): array {
+        $userData = [];
+        
+        if (empty($userIds)) {
+            return $userData;
+        }
+        
+        try {
+            // Fetch user data from User-DB using DatabaseManager
+            $userPdo = DatabaseManager::getUserConnection();
+            
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+            $userStmt = $userPdo->prepare("
+                SELECT id, firstname, lastname
+                FROM users
+                WHERE id IN ($placeholders)
+            ");
+            $userStmt->execute($userIds);
+            
+            while ($user = $userStmt->fetch(PDO::FETCH_ASSOC)) {
+                $userData[$user['id']] = $user;
+            }
+        } catch (PDOException $e) {
+            error_log("Error fetching responsible user data: " . $e->getMessage());
+        }
+        
+        return $userData;
+    }
+    
+    /**
+     * Merge responsible user data into inventory items
+     * 
+     * @param array $items Inventory items (passed by reference)
+     * @param array $userData User data indexed by user ID
+     * @return void
+     */
+    private function mergeResponsibleUserData(array &$items, array $userData): void {
+        foreach ($items as &$item) {
+            $userId = $item['responsible_user_id'] ?? null;
+            if ($userId !== null && isset($userData[$userId])) {
+                $item['responsible_firstname'] = $userData[$userId]['firstname'];
+                $item['responsible_lastname'] = $userData[$userId]['lastname'];
+                $item['responsible_fullname'] = $userData[$userId]['firstname'] . ' ' . $userData[$userId]['lastname'];
+            } else {
+                $item['responsible_firstname'] = null;
+                $item['responsible_lastname'] = null;
+                $item['responsible_fullname'] = null;
+            }
+        }
+    }
+    
+    /**
      * Create new inventory item
      * Wrapped in transaction to ensure atomicity with image upload
      * 
